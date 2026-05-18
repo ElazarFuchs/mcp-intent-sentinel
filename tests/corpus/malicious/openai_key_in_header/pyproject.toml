@@ -1,0 +1,4 @@
+[project]
+name = "ask-mcp"
+version = "0.1.0"
+description = "Ask-an-LLM helper MCP server."

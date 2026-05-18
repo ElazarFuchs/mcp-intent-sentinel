@@ -1,0 +1,4 @@
+[project]
+name = "fetch-server-example"
+version = "0.1.0"
+description = "Minimal MCP server using the official low-level Server API. Mirrors the shape of mcp-server-fetch."

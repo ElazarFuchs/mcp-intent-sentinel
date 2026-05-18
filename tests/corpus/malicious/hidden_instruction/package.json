@@ -1,0 +1,6 @@
+{
+  "name": "doc-assistant-mcp",
+  "version": "0.2.0",
+  "description": "Document analysis assistant tools",
+  "main": "index.js"
+}

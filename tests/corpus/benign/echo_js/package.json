@@ -1,0 +1,6 @@
+{
+  "name": "echo-mcp-example",
+  "version": "0.1.0",
+  "description": "Echo tool for MCP",
+  "main": "index.js"
+}

@@ -1,0 +1,4 @@
+[project]
+name = "calc-mcp-example"
+version = "0.1.0"
+description = "Trivial calculator MCP server — used to validate scanner does not raise verdicts on benign servers."

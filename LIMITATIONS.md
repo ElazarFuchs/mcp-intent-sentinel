@@ -1,0 +1,711 @@
+# LIMITATIONS — v0.1.5
+
+## Changes since v0.1.4
+
+User caught a leak in the v0.1.4 benign rate: `server-github` (26 tools,
+0 behavior extracted) classified as `benign` instead of `shallow`. Root cause:
+`_has_io_capable_imports` was a narrow substring list (httpx, requests, axios,
+nodemailer, ...) that missed `@octokit/rest`, `googleapis`, `kubernetes-client`,
+prisma, and most of the long-tail of npm/PyPI packages. With no I/O-capable
+import detected, the classifier's shallow rule didn't fire — and the verdict
+defaulted to benign.
+
+Three fixes shipped in v0.1.5:
+
+1. **`_has_io_capable_imports` rewritten** to AST-based detection: any import
+   of a non-stdlib (Python) / non-Node-builtin (JS) module counts as I/O-capable.
+   Plus stdlib/builtin modules that are themselves I/O (`http`, `socket`,
+   `subprocess`, `fs`, etc.). This catches Octokit, googleapis, and the rest.
+2. **Classifier shallow rule loosened** to no longer require `io_capable`:
+   with the broader detection above it's almost always True for real servers,
+   and trusting the per-tool behavior signals (next bullet) is cleaner.
+3. **PURE_COMPUTE coverage marker**: the analyzer now tags `PURE_COMPUTE` on
+   tool bodies it walked AND saw NO call it couldn't classify. A trivial
+   `def add(a, b): return a + b` keeps verdicting `benign` because the analyzer
+   *did* extract behavior (namely "examined and pure"). A `_fetcher.fetch(...)`
+   tool body keeps verdicting `shallow` because the call is opaque to the
+   analyzer — `saw_unknown_call=True` suppresses PURE_COMPUTE, behavior stays
+   empty, the shallow rule fires.
+
+**Bonus:** the eval report now SPLITS the benign list into "with extracted
+behavior" vs "zero behavior". If any zero-behavior entries ever appear, the
+report calls them out with a ⚠️ — the leak metric is now visible.
+
+**Test corpus change:** `file_lister` moved from `benign/` to `shallow/`.
+Its body uses `Path(d).iterdir()`, which is a real filesystem read MIS
+doesn't classify as an I/O signal. The honest verdict is shallow — same
+correctness move that fixes the server-github leak.
+
+**Tests**: 74 passing (was 73). Updated `test_classifier.py` to pin the new
+rules (PURE_COMPUTE → benign, empty behavior → shallow).
+
+---
+
+# LIMITATIONS — v0.1.4
+
+## Changes since v0.1.3
+
+v0.1.3's eval surfaced the headline: **70% UNKNOWN on real servers** —
+almost entirely TypeScript / npm packages using `server.registerTool(...)`,
+`server.setRequestHandler(CallToolRequestSchema, ...)`, and identifier-resolved
+config patterns the v0.1.3 regex analyzer never saw. v0.1.4 closes L3 by
+replacing the regex JS analyzer with an esprima-based AST analyzer with
+binding-aware resolution.
+
+What's in:
+
+- **esprima-based AST analysis** for `.js` / `.mjs` / `.cjs` / `.jsx` files
+  (the compiled output of every `@modelcontextprotocol/server-*` package).
+- **Three new registration patterns:** `server.registerTool(name, config, handler)`
+  with both inline-object and identifier-resolved config; `server.setRequestHandler(
+  ListToolsRequestSchema, ...)` returning `{tools: [...]}` (concise arrow body
+  or block body); paired `CallToolRequestSchema` handler analyzed for behavior.
+- **Module-level symbol table** — when `registerTool(name, config, ...)` uses
+  `Identifier` arguments, MIS now resolves them back to their `const` declarations.
+- **Net-client alias tracking** for axios.create, ky.extend, nodemailer.createTransport,
+  https.Agent, including `import fetch from 'node-fetch'` and `const fetch = require('node-fetch')`.
+- **State-poisoning detection**: `axios.create({headers: {Auth: process.env.X}})`
+  poisons the alias; every subsequent call exfils.
+- **Inter-procedural taint via per-module function summaries** (mirroring Python).
+- **BCC-injection (postmark) detection** at AST level.
+
+What's out:
+- `.ts` / `.tsx` source files still fall back to the v0.1.3 regex analyzer
+  (esprima can't parse TS syntax — see L3 update below). In practice, the
+  TS source is rarely what gets shipped to npm — packages ship compiled JS —
+  so this gap is small. If a server publishes TS source instead of dist,
+  we degrade to regex coverage on that file.
+- Modern syntax (`?.`, `??`, top-level await, etc.) trips esprima → regex fallback.
+
+**Tests**: 73 passing (was 62). Added `tests/test_js_ast_analyzer.py` with
+11 cases covering each new pattern, state-poisoning, inter-procedural exfil,
+and the TS fallback path.
+
+**Eval comparison (v0.1.3 → v0.1.4) — measured numbers:**
+
+| Verdict | v0.1.3 | v0.1.4 | Delta |
+|---|---:|---:|---:|
+| malicious | 1 | 1 | = |
+| suspicious | 1 | 2 | +1 |
+| unknown | 23 | 18 | **−5** |
+| shallow | 4 | 4 | = |
+| benign | 4 | 8 | **+4** |
+
+Total of 33 successful scans (out of 51 registry entries). Five npm servers
+that v0.1.3 emitted `unknown` for are now classified:
+- `@modelcontextprotocol/server-everything` (10 tools)
+- `@modelcontextprotocol/server-github` (26 tools)
+- `@modelcontextprotocol/server-redis` (4 tools)
+- `@modelcontextprotocol/server-everart` (1 tool)
+- `@modelcontextprotocol/server-gitlab` (now `suspicious` — r9.net_on_import)
+
+What's still `unknown` after v0.1.4 (18 servers):
+- 2 Python servers (`mcp-server-git`, `mcp-server-time`) using a Python
+  SDK pattern neither FastMCP nor official-low-level detectors recognize.
+- 16 npm servers with TypeScript dispatch shapes beyond the three v0.1.4
+  patterns. These break into sub-classes that v0.1.5+ work can chip at
+  one at a time, each one measurable in the eval delta.
+
+---
+
+# LIMITATIONS — v0.1.3
+
+## The measured baseline (from `eval/results/v0.1.3/report.md`)
+
+The eval harness was run on 51 real public MCP servers (canonical + popular
+community, PyPI + npm). 33 downloaded successfully; 18 failed (renamed,
+retired, or registry quirks — all listed in the report). On the 33 that
+ran, MIS produced:
+
+| Verdict | Count | % of scanned |
+|---|---:|---:|
+| malicious | 1 | 3.0% |
+| suspicious | 1 | 3.0% |
+| **unknown** | **23** | **69.7%** |
+| shallow | 4 | 12.1% |
+| benign | 4 | 12.1% |
+
+**The headline result: 70% of real-world MCP servers we tried are
+`unknown` to MIS v0.1.3.** That is the SDK-coverage ceiling, measured —
+not estimated. Almost the entire TypeScript ecosystem (every
+`@modelcontextprotocol/server-*` package on npm) uses `setRequestHandler`-
+style registration that we don't detect; the Python `mcp-server-git` and
+`mcp-server-time` servers use a Python-side variant that also falls
+outside our two recognized patterns. Closing this is v0.1.4's #1 priority.
+
+**Two real public servers flagged as threats** (FP candidates pending
+manual review):
+- `@notionhq/notion-mcp-server` — `suspicious` via r9.net_on_import (1
+  network call at module top scope; likely a license check / telemetry —
+  needs review).
+- `mcp-server-kubernetes` (PyPI) — `malicious` via r6.command_injection
+  (5 sites where tool input flows into `subprocess.check_output(cmd.split())`).
+  Manual review showed it uses `.split()` instead of `shell=True`, so it's
+  argument-list-form, not shell-form. **Likely FP** — `.split()` arg-form
+  is much weaker injection surface than shell-form, and the rule should
+  distinguish them. Tracked as a r6 tightening task for v0.1.4.
+
+**Shallow ceiling** (4 servers):  `mcp-server-fetch`, `mcp-server-sqlite`,
+`mcp-pandoc`, `mcp-server-wikipedia`. All four use class-based dispatch
+(L18) or imperative registration MIS doesn't follow yet.
+
+These numbers will change as the registry grows and as detectors get
+fixed. **The point of publishing them is that they're now measured.**
+
+## Changes since v0.1.2
+
+User-imposed embargo on new rules / fixtures until MIS could measure itself.
+v0.1.3 ships ONLY the eval harness — `eval/` package + registry of ~50 real
+MCP servers from PyPI and npm. No detector changes, no new rules.
+
+What this gives us:
+
+- **First measured verdict distribution on real servers** — see
+  `eval/results/v0.1.3/report.md`. Numbers cited below are pulled from
+  that file; if you regenerate the eval (`python -m eval.run`), update
+  the table here too.
+- **FP candidate list** — real, published servers that MIS verdicted
+  `malicious` or `suspicious`. Each one requires manual review. These are
+  the public servers we'd report upstream (true positives) or use to
+  tighten the rules (false positives). Either path is honest; hiding the
+  list isn't.
+- **Shallow rate on the wild** — how often MIS sees tools but extracts
+  zero behavior on real public servers. Direct measure of the L18 / SDK-
+  coverage ceiling, no longer self-reported.
+- **Failure-to-download list** — packages renamed, retired, or
+  unreachable. Reported explicitly so the verdict distribution can't be
+  silently skewed by selective inclusion.
+
+What this does NOT do (yet — flagged for v0.1.4 / v0.2):
+
+- **A formal benign labeling.** The `benign` list from the eval is a
+  CANDIDATE corpus for L11. Promoting any entry to the test corpus
+  requires manual review confirming it is genuinely benign (no exfil,
+  no backdoor). Until that happens, "the FP rate on this run is X"
+  is a *current measurement*, not a *property of MIS*.
+- **Side-by-side score vs mcp-scan.** mcp-scan (= snyk-agent-scan) was
+  installed; the harness can invoke it (`--baseline`); but mcp-scan
+  inspects MCP **config files and runtime tool descriptions**, not source.
+  It's a complementary category, not a competing scanner. A real
+  head-to-head needs another static-source scanner, none of which currently
+  ship publicly. L10 remains open — narrowed in scope, not closed.
+
+**Tests:** 62 still passing (no detector changes since v0.1.2). New `eval/`
+package is execution-only (not pytest-covered) by design — the eval needs
+network access and shouldn't run under `pytest -q`.
+
+---
+
+# LIMITATIONS — v0.1.2
+
+## Changes since v0.1.1
+
+A second field-test (same user, same day) revealed that v0.1.1's coverage
+of the official low-level SDK was *registration-only*: tool names were now
+extracted, but **behavior** wasn't. A textbook backdoor —
+`@app.call_tool()` + `httpx.AsyncClient` + `os.environ["OPENAI_API_KEY"]`
+in a header — verdict'd BENIGN. Three structural fixes:
+
+1. **Net-client alias tracking.** `client = httpx.AsyncClient()`, `s = requests.Session()`,
+   and `async with httpx.AsyncClient() as client:` now register the LHS as a
+   net alias. Subsequent `client.post(...)` / `s.get(...)` are recognized as
+   network calls — the original blocker.
+2. **Inter-procedural taint via function summaries** (partial L2 closure).
+   Pass-1 builds a signal summary per module-level function. Pass-2 tool-body
+   walkers consult the summary table: a call into a helper that itself
+   reads-secret-and-net-posts now propagates as if the body were inline.
+   Includes a new `RETURNS_SECRET` signal so helpers that just READ a secret
+   (without sending it) taint the return value of the call site.
+3. **`shallow` verdict.** "Tools detected + zero behavior signals across all of
+   them + source imports I/O-capable modules" no longer says BENIGN. It says
+   SHALLOW: MIS recognized the tool names but failed to follow what they do.
+   The CISO reading SHALLOW knows manual review is required; the CISO reading
+   BENIGN would have been misled.
+
+**New attack-paths now caught (regression-tested with new fixtures):**
+
+| Fixture | Path |
+|---|---|
+| `openai_key_in_header` | `@app.call_tool()` + `async with httpx.AsyncClient()` + secret in `Bearer ...` header |
+| `helper_exfil` | secret read in `_collect_env()`, net call in `_phone_home()`, both summary-propagated to `call_tool` |
+| `requests_session_exfil` | `s = requests.Session()` + `s.headers.update({"X-Key": os.environ[...]})` + `s.get(url)` |
+
+**Net-client mutation:** `s.headers.update({...secret...})` poisons the alias
+for subsequent calls (`NET_CLIENT_SECRET_STATE` signal). Even when the next
+`s.get(url)` has clean args, MIS fires `py.exfil.secret_in_client_state`.
+
+**Tests:** 62 passing (was 58). Corpus: 10 malicious + 5 benign + **1 new
+`shallow/` directory** containing `class_based_fetcher` (legit class-based
+real-world shape MIS cannot follow yet — verdict pinned to `shallow`).
+
+**What did NOT change:** L1 (no sandbox), L8 (no rug-pull), L10 (no eval vs
+baselines), L11 (no real-OSS FP rate). Per the user's prioritization: SDK
+coverage is the actual ceiling, not eval. v0.1.2 closed the secondary
+coverage gap (behavior); the rest of L13 (TypeScript `setRequestHandler`,
+imperative `mcp.add_tool()`) still leads v0.2.
+
+**Validated live against real `mcp_server_fetch-2025.4.7.tar.gz`:**
+v0.1.1 → BENIGN with 1 tool; v0.1.2 → SHALLOW with 1 tool. Same green visual
+in v0.1.1 turned into a clear admission of incomplete coverage in v0.1.2.
+The shallow verdict on a real legitimate server is BY DESIGN — it's the
+analyzer being honest, not a false positive on the server.
+
+---
+
+# LIMITATIONS — v0.1.1
+
+## Changes since v0.1.0
+
+Field-test against real-world MCP servers (`mcp-server-fetch` from PyPI, the
+`modelcontextprotocol/servers` monorepo) exposed two structural gaps:
+
+1. **`benign` was overloaded.** Both "MIS examined the server and saw nothing
+   bad" and "MIS did not understand the source at all" produced the same green
+   verdict. On a server using an SDK pattern MIS didn't recognize, that meant
+   a confidently-wrong "safe" verdict on something that had not actually been
+   analyzed — the exact failure mode the spec was built to avoid.
+2. **The official low-level SDK was invisible.** Tool detection covered FastMCP
+   (`@mcp.tool()`) but not the official `@server.list_tools()` / `@server.call_tool()`
+   pattern, which is what most published servers actually use.
+
+v0.1.1 fixes both:
+
+- New `unknown` verdict — emitted when 0 tools AND 0 findings. Ranked
+  ABOVE `benign` in `_VERDICT_RANK`, so `--fail-on-verdict` defaults to failing
+  on it. Opt-out exists (`--allow-unknown`) for users who explicitly accept
+  unanalyzed sources.
+- Official Python SDK low-level handler detection
+  (`@server.list_tools()` collects `Tool(name=..., description=...)` entries;
+  `@server.call_tool()` body is split per-tool by `if name == "X":` /
+  `match name: case "X":` branches when present).
+- `tools_detected` count + `tool_names` list in JSON output. The CLI also
+  prints this in the header, so a coverage gap is visible at a glance.
+- New regression fixtures: `tests/corpus/benign/official_sdk_fetch/` (shape
+  of mcp-server-fetch) and `tests/corpus/malicious/official_sdk_exfil/`
+  (same SDK pattern, with env→net exfil).
+
+**Tests:** 58/58 passing (up from 52). The pre-v0.1.1 behavior on
+`mcp_server_fetch-2025.4.7.tar.gz` was: 0 tools detected, verdict=`benign`,
+exit 0 — the dangerous case. Post-v0.1.1: 1 tool (`fetch`) detected,
+verdict=`benign`, exit 0 — same green light, but now with evidence the
+analyzer actually examined the file.
+
+**What did NOT change in v0.1.1:** L1 (no sandbox), L8 (no rug-pull), L10
+(no eval vs baselines), L11 (no real-OSS FP rate). Those remain top of the
+roadmap. See ROADMAP.md for the reordering this field-test forced.
+
+---
+
+This document is the contract between what `mcp-intent-sentinel` (MIS) does
+and what it is **not allowed to claim**. Every security claim in any external
+artifact (README, blog post, pitch deck, pilot scope) must be traceable to
+an entry below as "implemented and tested".
+
+If a property does not appear here as "implemented and tested", it is **not
+yet supported** by this code.
+
+> Convention borrowed from `pipi-mcp-poc` and `arsp`. Same discipline.
+
+## What v0.1.0 IS
+- A static-analysis + intent-classification CLI.
+- A reference corpus of 6 malicious + 4 benign MCP server fixtures, with
+  pytest assertions pinning the expected verdict for each.
+- Python 3.11+ codebase, ~1,800 lines across 12 modules.
+- One mandatory rule: the corpus IS the contract. Adding a new rule means
+  adding a fixture; a fixture going from malicious→benign is a regression.
+
+## What v0.1.0 is NOT
+- A sandbox / behavioral observer. We only read code; we do not execute it.
+  (Planned: L1.)
+- A semantic-rug-pull detector. We scan one version in isolation. (Planned: L8.)
+- A runtime gateway. mcp-trust / arsp do that. We answer "is this server safe
+  to install" — not "is this tool call safe to forward right now".
+- A signature verifier. mcp-trust covers Sigstore; we deliberately do not.
+- A measurement against deployed scanners (L10) — every comparative claim
+  ("better than mcp-scan / Cisco scanner") needs an evaluation file first.
+
+---
+
+## L1 — No sandboxed behavioral execution
+
+Per spec § 8, MVP v0 ships static analysis only. The MIS pipeline never
+imports, executes, or spawns the server under analysis. This means:
+
+- **Dynamic dispatch is invisible.** A tool registered via `getattr(mcp, "tool")`,
+  via reflection, or via a plugin loader is not detected.
+- **Runtime exfil is invisible** — e.g. a tool that imports a module which
+  monkey-patches `urllib.request.urlopen` at runtime to redirect to an
+  attacker URL is not caught.
+- **Heavily obfuscated control flow is missed.** Eval-of-eval, base64 string
+  loading, dynamic import via `__import__("os")`, etc., evade.
+
+**Concrete impact on attack-class detection:**
+
+| Attack | Static (v0.1) | Sandbox (v1) |
+|---|---|---|
+| postmark-style BCC exfil | ✓ caught | ✓ caught |
+| env → outbound HTTP | ✓ caught (function-local taint) | ✓ caught |
+| eval('postinstall_payload') | ✗ missed (literal string not analyzed) | ✓ caught |
+| Plugin/dynamic-loader exfil | ✗ missed | ✓ caught (if exercised) |
+
+**To lift:** v1.0 adds a sandbox runner (Firejail on Linux, sandbox-exec on
+macOS, Job Objects on Windows) that boots the server, calls every tool with
+benign synthetic inputs, and observes egress / fs reads / exec calls.
+
+## L2 — Python data-flow analysis is intra-function only (partially lifted in v0.1.2)
+
+v0.1.2 added **inter-procedural taint via function summaries** for module-level
+helpers. Pass-1 analyzes every module-level function and records the set of
+behavior signals it produces. Pass-2 (tool-body analysis) consumes those
+summaries: when a tool body calls a helper, the helper's signals are absorbed
+and a finding (`py.exfil.helper_secret_in_request` or
+`py.exfil.tainted_arg_to_net_helper`) attributes the path correctly.
+
+What still does NOT work after v0.1.2 (this remains the L2 gap):
+
+- **Class methods** — `_fetcher = Fetcher(); ... _fetcher.fetch(url)` is NOT
+  summarized. See L18.
+- **Module imports** — calls into imported helpers (`from .utils import phone_home`)
+  are NOT traced beyond the import line.
+- **Class hierarchies / mixins / decorators that wrap the function** are not
+  resolved.
+- **More than one hop** — if `tool → helper1 → helper2 → net_call`, only
+  the `tool → helper1` edge gets the summary signal; helper1's summary doesn't
+  transitively include helper2's signals (each function is summarized
+  independently in pass-1).
+
+`mis/analyzers/python.py` does conservative taint tracking inside each tool
+function. Tainted secret/input names propagate through:
+- Assignments
+- Attribute / subscript access
+- f-strings, `%`-format, `.format`, `.join`, `.encode`/`.decode`
+- Generator/list/set/dict comprehensions
+- Containers (list, tuple, set, dict literals)
+- Calls (any tainted arg/kwarg taints the result; method receivers inherit)
+- Path-rich expressions (`Path.home() / ".ssh" / "id_rsa"` → name path-tainted)
+
+**Not propagated across function boundaries.** A helper function that takes
+a secret and posts it elsewhere is missed unless the call site itself
+contains both the secret read and the network call.
+
+**Not propagated through global state.** Module-level assignments to
+`module.x = secret` are not followed back when `module.x` is later read.
+
+**To lift:** inter-procedural taint via a real call graph (e.g. pyan3 or a
+custom def/use builder).
+
+## L3 — JavaScript/TypeScript analyzer (closed for JS in v0.1.4; partial for TS)
+
+v0.1.4 ships `mis/analyzers/js_ast.py`, an esprima-based AST analyzer that
+replaces the regex `js.py` for `.js` / `.mjs` / `.cjs` / `.jsx` files.
+Detection is binding-aware: `server.registerTool(name, config, handler)`
+resolves Identifier args through the module-level symbol table; alias
+tracking handles `axios.create()`, `nodemailer.createTransport()`,
+`const fetch = require('node-fetch')`, etc.
+
+**What's still NOT covered:**
+
+- **TypeScript source** (`.ts` / `.tsx`) — esprima doesn't parse TS syntax
+  (interfaces, type annotations, `as` assertions). MIS falls back to the
+  v0.1.3 regex analyzer for these files. In practice, packages on npm
+  ship compiled JS (`dist/`), so this gap is small for the install-time
+  use case. For repository scanning (github: source), TS files are a real
+  blind spot.
+- **Modern JS syntax** (`?.`, `??`, private `#fields`, top-level await in
+  ESM, etc.) that esprima can't parse → regex fallback per-file.
+- **Obfuscation:** runtime construction of `process['env']['X']`,
+  `globalThis['process']`, dynamic `require(name)` with non-literal name —
+  esprima sees them syntactically but the binding-tracker doesn't reason
+  about computed property names.
+
+**To lift fully:** v0.2 — swap esprima for `@babel/parser` via Node subprocess
+to get TS coverage AND modern syntax in one move. The package size cost is
+significant; deferred until either TS source becomes the dominant install
+artifact (it isn't today) or someone hits the gap in a pilot.
+
+## L4 — Verdict coverage is bounded by the rule set
+
+The intent classifier has 9 rules (`mis/classifier/intent.py`). A `benign`
+verdict means "none of these 9 rules fired", not "this server is safe".
+Novel attack classes outside the rule set classify as benign.
+
+This is why the v0.1 confidence in `benign` is reported as 0.6, while the
+confidence in `malicious` rules is 0.85–0.95: false negatives in static
+analysis are not symmetric to false positives.
+
+**To lift:** v1.0 adds an optional `--llm-judge` layer (Haiku 4.5) mirroring
+the pattern proven in `agent-config-injection` (1.7% FP on 181 real OSS
+configs). It is opt-in and costs ~$0.001/scan.
+
+## L5 — JS brace matcher is best-effort
+
+`_match_paren` in `mis/analyzers/js.py` tracks string / template-literal
+boundaries naively. Specifically:
+- Template-literal `${...}` interpolation can confuse paren depth.
+- Regex literals (`/foo\)/`) can confuse paren depth.
+
+Result: a tool whose body contains either may have its body span over- or
+under-cut, causing missed signals.
+
+**To lift:** see L3 — proper AST parser fixes this.
+
+## L6 — Manifest analysis is direct-deps only
+
+`mis/analyzers/manifest.py` reads the package's own `package.json` /
+`pyproject.toml` / `setup.py`. It does NOT:
+- Follow `dependencies` / `install_requires` to scan transitive packages
+- Examine `package-lock.json` / `pip freeze` to detect version pinning gaps
+- Look at vendored copies of other packages
+
+**To lift:** v1.0 adds a transitive-deps scan capped at depth 2 (depth 1 = direct).
+
+## L7 — setup.py dropper detection is regex-based
+
+`_scan_pyproject` checks `setup.py` against the same fetch+exec regex as
+npm lifecycle scripts. It does NOT execute or import `setup.py`. A
+dropper that lives in a `setuptools.command.install` subclass with the
+shell call wrapped in `subprocess.Popen([sys.executable, "-c", ...])` is
+caught only if the literal pattern is present in the source.
+
+**To lift:** v0.2 adds AST-based detection of setuptools `cmdclass` registrations
+that include code outside the `from setuptools.command.install import install`
+boilerplate.
+
+## L8 — No baseline diff (no rug-pull / mutation detection)
+
+The spec (§ 5.3.4) lists "semantic rug-pull detection" as a core capability.
+v0.1 has none of this: each scan is a snapshot, with no comparison to a
+prior version. A server that publishes 1.0 (benign) and then re-publishes
+1.0.1 (malicious) — the documented MCPoison (CVE-2025-54136) shape — is
+verdicted on whichever version we see, with no awareness of the change.
+
+**To lift:** v0.2 adds `mis diff <prev> <next>` which:
+- Hashes each tool's `(name, description, declared_intent, behavior_signals)` tuple
+- Reports any *semantic* change (not just byte hash) as a rug-pull candidate
+- Escalates verdict to `suspicious` if a tool's `declared_intent` flips, or
+  if any new BehaviorSignal in {NET_HTTP_OUTBOUND, EXEC_SHELL, SECRET_FS_READ}
+  appears that was not in the prior version
+
+## L9 — No registry/index scan
+
+The CLI scans one source at a time. To answer the realistic CISO question
+"are any of the 12 MCP servers our dev team has installed unsafe?" the
+user has to invoke `mis scan` 12 times.
+
+**To lift:** v0.2 adds `mis scan-all <directory-of-manifests>` and
+`mis ingest npm:@modelcontextprotocol/*`.
+
+## L10 — No measurement against deployed scanners (partially lifted in v0.1.3, scope-narrowed)
+
+v0.1.3 ships the eval harness (`eval/run.py`) and runs MIS against a
+registry of ~50 real PyPI/npm MCP servers (see `eval/registry.py`).
+That measures MIS's behavior on real code — a self-comparison MIS lacked
+in v0.1.0–v0.1.2. The report (`eval/results/v0.1.3/report.md`) makes
+verdict distribution, shallow rate, and FP candidates public per run.
+
+What L10 still does NOT cover:
+
+- **No competing static-source scanner exists publicly to compare against.**
+  `mcp-scan` (the only OSS option we found, now `snyk-agent-scan`) scans
+  **MCP configs and runtime tool descriptions**, not server source code.
+  It's a different category — useful, but not a head-to-head for "did MIS
+  catch what scanner X missed on the same source tarball?"
+- The Cisco MCP Server Inspector mentioned in the spec is referenced but
+  not findable on npm / PyPI as of v0.1.3. If it ships as a public CLI
+  later, the harness has an `--baseline` slot to wire it in.
+
+**To lift fully:** a real source-scanner baseline becomes available, OR
+v0.2 ships a `eval/compare_to_mcp_scan_inspect.py` that picks 10 servers,
+boots them via `npx`/`uvx`, runs `mcp-scan inspect` on each, and produces
+a confusion matrix on the *tool description* layer (not source). That
+covers a different attack surface than MIS — useful to show coverage gap,
+not a wedge comparison.
+
+## L11 — No FP rate measurement on real OSS corpus (partially lifted in v0.1.3)
+
+v0.1.3's eval harness runs MIS against ~50 real public MCP servers and
+records the verdict distribution. The `benign` list in
+`eval/results/v0.1.3/report.md` is a CANDIDATE benign corpus, and the
+`malicious` / `suspicious` list is the FP-candidate list (each entry needs
+manual review — true positive → upstream issue, false positive → tighten rule).
+
+What L11 still does NOT cover:
+
+- **Manual labeling is incomplete.** Each entry on the benign list still
+  needs an independent confirmation it's actually benign. Until that
+  labeling exists, "FP rate is N%" is a *current run* statement, not a
+  *property of MIS*.
+- **The eval corpus skews toward Anthropic + popular community servers.**
+  Long-tail community servers (1–10 downloads/week) are under-represented.
+  A more honest FP rate would sample randomly across the whole PyPI/npm
+  `mcp-server-*` namespace.
+
+**To lift fully:** v0.1.4 — write a one-time labeling pass on the v0.1.3
+benign list (~30 entries expected), commit a `eval/labels.json` mapping
+name → verified_benign | verified_malicious | uncertain. Then the eval
+report can publish a real FP rate with a denominator we trust.
+
+## L12 — Source extraction supports a narrow set of schemes
+
+`mis/extractors/base.py` handles local paths/archives, `github:owner/repo[#ref]`,
+`npm:pkg[@ver]`, and `pypi:pkg[==ver]`. It does NOT handle:
+- OCI / Docker images
+- Smithery's private protocol
+- Authenticated git / private npm registries
+- Private PyPI indexes
+- Arbitrary HTTPS URLs to tarballs not hosted on npm/PyPI/GitHub
+
+**To lift:** v0.2 adds an `OciExtractor` and configurable `RegistrySource`
+plugins.
+
+## L13 — Tool-registration detection covers a partial set of SDKs (partially lifted in v0.1.1)
+
+We detect:
+- Python — FastMCP: `@mcp.tool` / `@server.tool[(name=..., description=...)]` / bare `@tool`
+- Python — **official low-level SDK** (v0.1.1): `@server.list_tools()` returning
+  `[Tool(name=..., description=...), ...]` paired with `@server.call_tool()`.
+  Detection is by rightmost decorator attribute (`list_tools` / `call_tool`),
+  so any object — `server`, `app`, `mcp` — works.
+- JS/TS: `server.tool(name, desc, schema, handler)` positional, `server.tool({name, description, ...})` object, `new Tool({name, description, ...})`
+
+We do NOT detect:
+- Manual JSON-RPC handlers (`server.setRequestHandler("tools/call", ...)`)
+- Plugin frameworks that register tools dynamically (e.g. FastMCP's
+  `mcp.add_tool(callable, name=..., description=...)` call-style API)
+- Aliased decorators (`from mcp.server import tool as register`)
+- TypeScript SDK manual handler style (`server.setRequestHandler(CallToolRequestSchema, ...)`)
+- Tools declared in a non-list_tools handler but registered via the request
+  handler API directly
+
+**Impact:** a server using a non-detected registration path emits 0 tool
+profiles. v0.1.1 fixes that by promoting this to verdict=`unknown` instead of
+`benign` — see L17. Rules r1, r3, r5, r6, r7, r9 (file-level evidence) still
+work even when no tools are detected.
+
+**To lift further:** v0.2 adds detection for the remaining manual-registration
+patterns above plus a fallback "tool-shaped function" heuristic.
+
+## L15 — Per-tool branch attribution is best-effort
+
+When a `@server.call_tool()` handler dispatches via `if name == "X":` or
+`match name: case "X":`, MIS isolates the per-tool branch and attributes
+behavior signals + findings to the specific tool. When the dispatch shape is
+different (table-driven, dict lookup, polymorphic call, regex match), MIS
+falls back to **coarse attribution**: it analyzes the WHOLE call_tool body,
+applies the resulting signal set to every detected tool, and emits findings
+once with a generic "call_tool handler" attribution + the suffix
+"(Per-tool attribution unavailable: dispatch shape not recognized. See
+LIMITATIONS.md L15.)".
+
+**Concrete impact:** if a server has 5 tools and the call_tool handler is a
+dict-driven dispatcher where only the `leak` tool actually exfiltrates, the
+fallback path:
+- Correctly fires the exfil rule (true positive — good)
+- Attributes the BehaviorSignal to all 5 tools' behavior sets, so r4
+  (intent_mismatch) may fire on tools that don't deserve it (false positive)
+
+The fallback is loud-but-not-silent on purpose: a missed exfil is worse than
+an over-tagged intent_mismatch with a clearly-attributed reason.
+
+**To lift:** v0.2 — recognize 3 more dispatch shapes (dict lookup,
+`getattr(self, f"handle_{name}")`, decorator-registered subhandlers).
+
+## L16 — Behavioral analysis trusts type/keyword arg names
+
+The official-SDK Tool extractor reads `Tool(name=..., description=...)` by
+keyword name only — it does NOT verify that `Tool` is imported from
+`mcp.types`. A class named `Tool` in unrelated code (e.g. an internal helper)
+inside the `list_tools` handler would be picked up. This is a non-issue in
+practice (list_tools handlers are short and tightly scoped), but it's worth
+naming.
+
+## L17 — `unknown` verdict's bound depends on L13
+
+The new `unknown` verdict (v0.1.1) closes the dangerous failure mode of
+"green light on silence". But it cannot tell the difference between:
+- "MIS does not support the SDK this server uses" (genuine coverage gap → L13)
+- "the source root passed is wrong" (e.g. the user pointed at a docs/ dir)
+- "the file failed to parse and was skipped" (we emit a `py.parse.syntax_error`
+  finding, which means verdict would actually be `benign`, not `unknown` —
+  this case is currently classified differently from the first two)
+
+The CLI text covers all three in the Reason panel, but the JSON verdict
+field doesn't disambiguate. Consumers parsing JSON should treat `unknown`
+as "manual review required" without trying to infer the cause from the
+verdict alone.
+
+**To lift:** v0.2 introduces a `coverage_status` field on ScanResult with
+values like `sdk_not_recognized`, `no_python_or_js_files`, `parse_errors_dominant`.
+
+## L18 — Class-method dispatch is invisible (new in v0.1.2)
+
+Function summaries (v0.1.2 L2 closure) cover module-level functions only.
+Class methods are not summarized — neither in pass-1 nor at call sites.
+
+**Concrete impact:** a server that instantiates `_fetcher = Fetcher()` and
+calls `_fetcher.fetch(url)` from the tool handler is opaque. MIS sees the
+call but cannot follow it into `Fetcher.fetch`. If `Fetcher.fetch` does
+`self.client.get(url, headers={"Auth": os.environ["TOKEN"]})`, the exfil
+is missed.
+
+`tests/corpus/shallow/class_based_fetcher/` is a fixture for this case.
+Its verdict is `shallow` — MIS is honest about not understanding the
+implementation. A malicious variant of the same shape would currently also
+verdict `shallow`, NOT `malicious`. The CISO still gets a non-green light;
+but they don't get a finding pointing at the leak.
+
+**To lift:** v0.2.x — track class definitions in pass-1, summarize methods
+the same way as module-level functions, and resolve `<alias>.<method>()`
+calls by walking back to the instance's class.
+
+## L19 — Function-summary signal-emission asymmetry
+
+A consequence of L2's partial closure: when an exfil chain crosses functions,
+MIS emits the finding at the OUTER call site (the tool body), not at the
+inner line where the secret read actually happens. The detail string names
+the helper, but the file/line in the finding points at the tool's call,
+not the helper's exfil line. This is correct for the verdict (the tool is
+responsible) but may make the triage line feel one indirection off when
+reviewing a long helper.
+
+**To lift:** v0.2 — emit dual findings (one at the tool body for verdict,
+one at the helper for review), linked by a `caused_by_finding_id` field.
+
+## L20 — `shallow` verdict's heuristic uses substring matching
+
+The classifier's `shallow` rule relies on `_has_io_capable_imports`, which
+checks for I/O-capable module names by substring (`"httpx"`, `"requests"`,
+etc.). This catches `import httpx`, `from httpx import AsyncClient`, and
+`require("axios")` — but also any occurrence of the word in comments,
+docstrings, or string literals.
+
+**Concrete impact:** a calculator server whose docstring says "this server
+does NOT use requests, httpx, or any HTTP client" would (cheekily) be
+flagged as I/O-capable. If the tools also have no behavior signals, the
+verdict would shift from `benign` to `shallow`. Annoying but not dangerous —
+`shallow` is an epistemic verdict, not a threat one.
+
+**To lift:** v0.2 — switch to AST-based import scanning for `.py` files,
+keep substring matching as a fast pre-filter.
+
+## L14 — No supply-chain attestation check
+
+We do not look at Sigstore bundles, npm provenance, PyPI Trusted Publishers,
+or GitHub release attestations. `mcp-trust` covers that layer. MIS deliberately
+focuses on "what the code does", not "who signed it".
+
+**To lift:** never, in this codebase. The composition story is:
+`mcp-trust verify` confirms publisher → `mis scan` confirms intent. Either
+alone is incomplete.
+
+---
+
+## What changing between versions means
+
+- **patch** (0.1.X → 0.1.Y): new rules added, false positives fixed, new
+  fixtures added. Existing rule IDs (r1.., r9..) keep their semantics; only
+  thresholds may change.
+- **minor** (0.1 → 0.2): new analyzer (sandbox, diff), new extractor scheme,
+  new SDK detected. Rule IDs may renumber (r4 → r4.1) if their semantics tighten.
+- **major** (0.X → 1.0): the LIMITATIONS labels above (L1, L8, L10, L11) flip
+  from "to lift" to "implemented and tested".

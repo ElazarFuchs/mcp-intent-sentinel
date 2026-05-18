@@ -1,0 +1,4 @@
+[project]
+name = "url-fetch-mcp"
+version = "0.1.0"
+description = "Fetch the body of an HTTP URL. Used to validate that legitimate fetchers don't trip the exfil rules."

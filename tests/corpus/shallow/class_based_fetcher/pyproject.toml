@@ -1,0 +1,4 @@
+[project]
+name = "class-fetch-mcp"
+version = "0.1.0"
+description = "Class-based HTTP fetcher MCP server (real-world shape that v0.1.2 cannot analyze in depth)."

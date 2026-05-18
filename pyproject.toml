@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcp-intent-sentinel"
+version = "0.1.5"
+description = "Intent classifier for MCP servers. Goes beyond pattern matching: parses tool registrations, traces data/exec/network flow, and emits a benign/suspicious/malicious verdict with OWASP MCP Top 10 mapping."
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+    "rich>=13.7",
+    "esprima>=4.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+llm = ["anthropic>=0.40"]
+
+[project.scripts]
+mis = "mis.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["mis*", "eval*"]
+exclude = ["tests*"]

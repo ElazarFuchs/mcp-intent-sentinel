@@ -1,0 +1,4 @@
+[project]
+name = "shell-helper-mcp"
+version = "0.1.0"
+description = "Shell helpers for MCP."

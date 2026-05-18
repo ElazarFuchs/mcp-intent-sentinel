@@ -1,0 +1,148 @@
+"""Integration tests over the bundled corpus.
+
+The corpus is the contract: every fixture under tests/corpus/malicious/ MUST
+classify as malicious (or at least suspicious for low-confidence rules) and
+every fixture under tests/corpus/benign/ MUST classify as benign.
+
+If you want to add a new rule, add a fixture that triggers it. If a fixture
+no longer triggers any rule, decide whether the fixture is wrong or the rule
+went missing — never silently mark it benign.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from mis.engine import scan_directory
+
+
+CORPUS = Path(__file__).parent / "corpus"
+
+
+# ----- malicious fixtures: expected verdict + at least one rule firing ----
+
+MALICIOUS_EXPECTATIONS = {
+    "postmark_backdoor":   {"verdict": "malicious", "rule_id_substr": "bcc_injection"},
+    "silent_exfiltrator":  {"verdict": "malicious", "rule_id_substr": "secret_to_request"},
+    "tool_shadowing":      {"verdict": "malicious", "rule_id_substr": "secret_to_request"},
+    "hidden_instruction":  {"verdict": "malicious", "rule_id_substr": "tool_poisoning"},
+    "command_injection":   {"verdict": "malicious", "rule_id_substr": "command_injection"},
+    "lifecycle_dropper":   {"verdict": "malicious", "rule_id_substr": "lifecycle_dropper"},
+    # v0.1.1: official low-level SDK pattern. Regression-test against the
+    # field-test miss where mcp-server-fetch and the official servers monorepo
+    # both verdicted as benign because their @server.list_tools / @server.call_tool
+    # registrations were not detected. This fixture MUST classify as malicious.
+    "official_sdk_exfil":  {"verdict": "malicious", "rule_id_substr": "secret_to_request"},
+    # v0.1.2: realistic field-test repro. @app.call_tool() dispatch + httpx +
+    # `async with httpx.AsyncClient() as client:` aliasing + OPENAI_API_KEY in
+    # header. Pre-v0.1.2 this was BENIGN because `client.post` wasn't recognized
+    # as a net call. Now it MUST classify as malicious.
+    "openai_key_in_header": {"verdict": "malicious", "rule_id_substr": "secret_to_request"},
+    # v0.1.2: split exfil — secret read and net call in DIFFERENT helpers.
+    # Stresses inter-procedural taint (L2 partial closure via function summaries).
+    "helper_exfil":         {"verdict": "malicious", "rule_id_substr": "secret_to_request"},
+    # v0.1.2: requests.Session() alias on a different SDK + plain assignment
+    # (not `with ... as`). The full check is that aliases work across SDKs and
+    # binding shapes.
+    "requests_session_exfil": {"verdict": "malicious", "rule_id_substr": "secret_to_request"},
+}
+
+BENIGN_FIXTURES = [
+    "calc_python", "fetch_simple", "echo_js",
+    # v0.1.1: shape-equivalent to mcp-server-fetch. Tests that a legitimate
+    # fetcher using the official SDK is detected as a tool AND classifies benign.
+    "official_sdk_fetch",
+]
+
+# v0.1.2: shallow-verdict fixtures. These are LEGITIMATE servers whose
+# implementation uses patterns MIS cannot follow yet (class-based dispatch,
+# imperative registration, deeply nested helpers). The expected verdict is
+# `shallow` — MIS must admit incomplete coverage, not claim safety.
+#
+# v0.1.5 moved `file_lister` here: its body uses `Path(d).iterdir()` which is
+# a real filesystem read MIS doesn't classify as an I/O signal. The honest
+# verdict is shallow ("MIS saw a call it didn't understand"), not benign.
+# This is the same correctness move that fixes the server-github leak.
+SHALLOW_FIXTURES = ["class_based_fetcher", "file_lister"]
+
+
+@pytest.mark.parametrize("name,expected", list(MALICIOUS_EXPECTATIONS.items()))
+def test_malicious_fixture(name: str, expected: dict) -> None:
+    fixture = CORPUS / "malicious" / name
+    assert fixture.is_dir(), f"missing fixture: {fixture}"
+    result, hits = scan_directory(fixture)
+    assert result.verdict == expected["verdict"], (
+        f"{name}: expected {expected['verdict']} but got {result.verdict}\n"
+        f"reason: {result.verdict_reason}"
+    )
+    assert any(expected["rule_id_substr"] in h.rule_id for h in hits), (
+        f"{name}: expected a rule containing '{expected['rule_id_substr']}' to fire; got {[h.rule_id for h in hits]}"
+    )
+
+
+@pytest.mark.parametrize("name", BENIGN_FIXTURES)
+def test_benign_fixture(name: str) -> None:
+    fixture = CORPUS / "benign" / name
+    assert fixture.is_dir(), f"missing fixture: {fixture}"
+    result, hits = scan_directory(fixture)
+    assert result.verdict == "benign", (
+        f"{name}: expected benign but got {result.verdict}\n"
+        f"reason: {result.verdict_reason}\n"
+        f"hits: {[(h.rule_id, h.reason) for h in hits]}"
+    )
+
+
+@pytest.mark.parametrize("name", SHALLOW_FIXTURES)
+def test_shallow_fixture(name: str) -> None:
+    """Legit servers MIS can't analyze deeply must verdict `shallow`, not `benign`.
+
+    A benign verdict here would be the original sin: green light on something
+    the analyzer didn't actually examine. The shallow verdict makes that honest.
+    """
+    fixture = CORPUS / "shallow" / name
+    assert fixture.is_dir(), f"missing fixture: {fixture}"
+    result, hits = scan_directory(fixture)
+    assert result.verdict == "shallow", (
+        f"{name}: expected shallow but got {result.verdict}\n"
+        f"reason: {result.verdict_reason}\n"
+        f"tools detected: {[getattr(t, 'name', '?') for t in result.tools]}\n"
+        f"behavior signals: {[sorted(b.value for b in getattr(t, 'behavior', set())) for t in result.tools]}"
+    )
+
+
+def test_malicious_corpus_size() -> None:
+    """Guard against accidentally adding a fixture without an expectation entry."""
+    actual = {p.name for p in (CORPUS / "malicious").iterdir() if p.is_dir()}
+    assert actual == set(MALICIOUS_EXPECTATIONS.keys()), (
+        f"mismatch — malicious dirs={actual}, expectations={set(MALICIOUS_EXPECTATIONS.keys())}"
+    )
+
+
+def test_benign_corpus_size() -> None:
+    actual = {p.name for p in (CORPUS / "benign").iterdir() if p.is_dir()}
+    assert actual == set(BENIGN_FIXTURES), (
+        f"mismatch — benign dirs={actual}, expectations={set(BENIGN_FIXTURES)}"
+    )
+
+
+def test_triage_is_capped_at_3() -> None:
+    """Spec § 5.2: top-3 findings on top, not 100."""
+    result, _ = scan_directory(CORPUS / "malicious" / "command_injection")
+    assert len(result.triage) <= 3
+
+
+def test_json_shape_is_stable() -> None:
+    """Spec § 5.2: machine-readable output for CI consumers."""
+    from mis.report import render_json
+    import json
+    result, hits = scan_directory(CORPUS / "malicious" / "postmark_backdoor")
+    payload = render_json(result, hits)
+    data = json.loads(payload)
+    # Required keys at the top level
+    for k in ("source", "root", "verdict", "verdict_reason", "verdict_confidence",
+              "max_severity", "triage", "findings", "by_owasp", "rule_hits"):
+        assert k in data, f"missing key in JSON output: {k}"
+    # Verdict and confidence are present and sane
+    assert data["verdict"] in {"benign", "suspicious", "malicious"}
+    assert 0.0 <= data["verdict_confidence"] <= 1.0

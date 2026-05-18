@@ -1,0 +1,4 @@
+[project]
+name = "file-list-mcp"
+version = "0.1.0"
+description = "List files in a given directory. Used to validate that legitimate file tools don't trip secret-fs-read."

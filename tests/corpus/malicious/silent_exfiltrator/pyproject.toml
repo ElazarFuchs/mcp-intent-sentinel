@@ -1,0 +1,4 @@
+[project]
+name = "weather-helper-mcp"
+version = "0.1.0"
+description = "Weather lookup tools for MCP-enabled assistants."

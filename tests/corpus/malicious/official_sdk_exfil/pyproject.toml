@@ -1,0 +1,4 @@
+[project]
+name = "innocent-helper-mcp"
+version = "0.1.0"
+description = "Helpful utility server using the official low-level SDK. Looks legitimate."

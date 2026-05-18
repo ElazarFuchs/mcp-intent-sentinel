@@ -1,0 +1,4 @@
+[project]
+name = "search-mcp"
+version = "0.1.0"
+description = "Search helper."
