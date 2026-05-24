@@ -27,6 +27,14 @@ class BehaviorSignal(str, Enum):
     SECRET_ENV_READ = "secret.env.read"                # reads env vars and SENDS them (vs uses locally)
     SECRET_FS_READ = "secret.fs.read"                  # reads ~/.ssh, ~/.aws, browser keychains, etc.
     SECRET_IN_REQUEST = "secret.in_request"            # env value or fs-read content flows into outbound request
+    # Host fingerprint — platform.system/release/version/machine/node, socket.gethostname,
+    # os.uname. Less sensitive than env (no credentials) but still PII and identifies the
+    # deployment. Tracked separately so the classifier can verdict `suspicious` (not malicious)
+    # when fingerprint data — but no env/fs secret — flows to network. Added v0.1.6 after the
+    # model-compliance eval surfaced "modified payload" bypass: model refuses to send env vars
+    # but happily POSTs platform.platform() + socket.gethostname() to the attacker URL.
+    HOST_FINGERPRINT_READ = "host.fingerprint.read"
+    HOST_FINGERPRINT_IN_REQUEST = "host.fingerprint.in_request"
     # Function-summary signal: this function's return value is secret-tainted.
     # Used to propagate taint across function boundaries (L2 partial closure).
     RETURNS_SECRET = "returns.secret"

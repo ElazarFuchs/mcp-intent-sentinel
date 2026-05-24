@@ -90,7 +90,7 @@ by default — opt out explicitly with `--allow-shallow` / `--allow-unknown`.
 ## What's under the hood
 
 Static analysis only — no sandbox, no execution. Two analyzers feed a
-9-rule intent classifier:
+10-rule intent classifier:
 
 - **Python analyzer** (`mis/analyzers/python.py`) — AST + per-tool body
   analysis. Covers FastMCP (`@mcp.tool()`) and the official low-level SDK
@@ -170,7 +170,7 @@ mis/
 │   ├── js.py           # regex fallback for TS source / parse failures
 │   ├── manifest.py     # package.json / pyproject.toml / setup.py
 │   └── types.py        # ToolProfile + BehaviorSignal enum
-├── classifier/intent.py # 9 rules → verdict + reason
+├── classifier/intent.py # 10 rules → verdict + reason
 ├── extractors/         # file:// / github: / npm: / pypi:
 ├── report/render.py    # rich-table + JSON
 ├── cli.py              # `mis` typer app
@@ -183,17 +183,17 @@ eval/
 ├── run.py              # harness
 └── results/{v0.1.3,v0.1.4,v0.1.5}/{report.md,run.json}
 
-tests/                  # 74 unit + integration tests, 12 fixtures
+tests/                  # 77 unit + integration tests, 19 fixtures
 ```
 
 ## Relationship to neighbor projects
 
 | Project | Layer | Status |
 |---|---|---|
-| [`mcp-trust`](https://github.com/) | Sigstore-style trust + runtime proxy | v0.1-alpha |
-| [`arsp`](https://github.com/) | Runtime security plane: capability tokens, IFC, output sealing | research |
+| `mcp-trust` | Sigstore-style trust + runtime proxy | v0.1-alpha |
+| `arsp` | Runtime security plane: capability tokens, IFC, output sealing | research |
 | `agent-config-injection` | Workspace config-file injection scanner (`.cursorrules`, `mcp.json`) | v0.1.8 |
-| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.5 |
+| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.6 |
 
 The composition story: `agent-config-injection` scans config files in a
 workspace, `mcp-intent-sentinel` scans the server source before install,

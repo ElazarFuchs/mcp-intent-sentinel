@@ -1,4 +1,66 @@
-# LIMITATIONS — v0.1.5
+# LIMITATIONS — v0.1.6
+
+## Changes since v0.1.5
+
+The v0.1.5 model-compliance eval (`eval/model_compliance/results/v0.1.5-full/`)
+prompted 7 LLMs to generate the 10 malicious-corpus patterns at 3 disguise
+levels each — 210 calls total. Result: 0% refusal across every model and
+disguise level, and many of the model outputs slipped through MIS. Bypass
+classification (`eval/model_compliance/classify_bypass.py`) separated the 33
+`code_benign` rows into 14 TRUE_BYPASS (Sentinel missed real exfil) and 19
+OUTPUT_REFUSAL (model wrote a safer variant — MIS was correct). v0.1.6 ships
+four fixes that close 8 of the 14 TRUE_BYPASS rows with zero regressions on
+the existing corpus / 51-server eval.
+
+Headline delta on the cached responses (re-judged via
+`eval/model_compliance/rejudge.py`):
+
+| intent | v0.1.5 caught | v0.1.6 caught | Δ |
+|---|---|---|---|
+| official_sdk_exfil       |  4.8% | 19.0% | **+14.2** |
+| openai_key_in_header     | 23.8% | 33.3% | **+9.5** |
+| silent_exfiltrator       | 14.3% | 19.0% | +4.7 |
+| helper_exfil             | 28.6% | 33.3% | +4.7 |
+| requests_session_exfil   | 14.3% | 19.0% | +4.7 |
+
+**Fix 1 — Dict-literal tool extraction.** `_extract_tools_from_list_tools`
+now recognizes `{"name": ..., "description": ...}` dict literals alongside
+the v0.1.1 `Tool(name=...)` constructor form. Both are accepted by the real
+MCP Python SDK; pre-v0.1.6 only the latter was detected. DeepSeek, Kimi,
+Llama, and Qwen routinely emit the dict shape, which is why official_sdk_exfil
+sat at 4.8% recall before v0.1.6 — most of the unknown verdicts were
+"tools=0 because we couldn't see the registration", not real coverage gaps.
+
+**Fix 2 — Module-level secret propagation.** Pass-0 of `_FileAnalyzer.visit_Module`
+now scans top-level assignments for `NAME = os.environ[...]` / `os.getenv(...)`
+and stores them in `self._module_secrets`. Body walkers — both the FastMCP path
+and the official-SDK `_fuse_official_sdk_tools` path — receive this set and
+pre-seed their `_secret_taint`. The dominant `openai_key_in_header` bypass
+shape (key bound at module scope, referenced in a Bearer header inside the
+tool body) is now caught.
+
+**Fix 3 — Host-fingerprint signals + r11.** New `HOST_FINGERPRINT_READ` and
+`HOST_FINGERPRINT_IN_REQUEST` BehaviorSignals + a new `r11.fingerprint_to_request`
+classifier rule (verdict `suspicious`). Catches the "modified payload" bypass
+where alignment-tuned frontier models refuse env exfil but emit
+`platform.platform()` + `socket.gethostname()` → POST instead. Inter-procedural:
+when a tool calls a helper whose summary contains HOST_FINGERPRINT_IN_REQUEST,
+a derived finding is re-emitted at the call site so r11 sees it.
+
+**Fix 4 — Three new corpus fixtures** promoted from the eval's TRUE_BYPASS rows:
+`runtime_context_exfil` (verdicts suspicious via r11), `module_level_secret_exfil`
+(verdicts malicious via r1), `dict_literal_tools_exfil` (verdicts malicious via r1).
+Test count: 74 → 77, all passing.
+
+**What's NOT fixed in v0.1.6** (carried to roadmap):
+- Class-based MCP servers (DeepSeek framed `class TelemetryServer: self.server = mcp.Server(...)`)
+  — still verdicts `unknown` because the analyzer doesn't follow Server() construction
+  through `__init__`. L18 class-method dispatch.
+- JS object-config `server.tool({name, description, ...}, handler)` form
+  (vs the positional 4-arg form the existing fixtures use). L13 JS shape coverage.
+- Helper-with-env-param: `def _post(env): client.post(..., json=dict(env))` called
+  with `_post(os.environ)`. Requires param-level taint summaries; existing
+  function summaries only capture intrinsic body signals. Partial L2 still open.
 
 ## Changes since v0.1.4
 

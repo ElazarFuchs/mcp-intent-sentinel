@@ -210,10 +210,20 @@ class _FileAnalyzer(ast.NodeVisitor):
         # pass-1, consumed in pass-2 when analyzing tool bodies.
         # Schema: {func_name: {"signals": set[BehaviorSignal], "is_tool_handler": bool}}
         self._function_summaries: dict[str, dict] = {}
+        # Module-level secret bindings: names assigned at top level from
+        # os.environ[...] / os.getenv(...) / open(SENSITIVE_PATH). Added v0.1.6
+        # after the model-compliance eval showed `OPENAI_API_KEY = os.environ[X]`
+        # at module scope + use-inside-tool was the dominant openai_key_in_header
+        # bypass shape. Without this, the intra-function analyzer never sees the
+        # binding and the tool body's `f"Bearer {OPENAI_API_KEY}"` looks clean.
+        self._module_secrets: set[str] = set()
 
     # ---- top-level structure ----
 
     def visit_Module(self, node: ast.Module) -> None:
+        # Pass 0: collect module-level secret bindings BEFORE function summaries
+        # (summaries need the secret set so their body walkers see module taints).
+        self._collect_module_secrets(node)
         # Pass 1: build a summary for every function defined at module level.
         # This populates self._function_summaries so that pass-2 body analyzers
         # can resolve inter-procedural calls into their downstream effects.
@@ -330,6 +340,7 @@ class _FileAnalyzer(ast.NodeVisitor):
                 tool_name=profile.name,
                 param_names=set(params),
                 function_summaries=self._summaries_for_body(exclude=node.name),
+                module_secrets=self._module_secrets,
             )
             for stmt in node.body:
                 body_walker.visit(stmt)
@@ -356,6 +367,34 @@ class _FileAnalyzer(ast.NodeVisitor):
             evidence = _src_line(self.source, node.lineno)
             self._top_level_net.append((node.lineno, evidence))
         self.generic_visit(node)
+
+    def _collect_module_secrets(self, module_node: ast.Module) -> None:
+        """Pass-0: collect top-level `NAME = <secret-source>` bindings.
+
+        Targets:
+            OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+            TOKEN = os.environ.get("TOKEN")
+            KEY = os.getenv("X")
+
+        Module-level assignments only — class bodies / function bodies are
+        handled by the intra-function analyzer. Tuple-unpacking is supported
+        (rare in practice for secrets, but cheap to cover).
+
+        Side effect: populates self._module_secrets so pass-2 body walkers can
+        recognize references to these names as already-tainted.
+        """
+        for stmt in module_node.body:
+            if not isinstance(stmt, (ast.Assign, ast.AnnAssign)):
+                continue
+            value = stmt.value
+            if value is None:
+                continue
+            if not _is_env_read(value):
+                continue
+            targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
+            for tgt in targets:
+                for n in _name_targets(tgt):
+                    self._module_secrets.add(n)
 
     def _build_function_summaries(self, module_node: ast.Module) -> None:
         """Pass-1: enumerate module-level functions, run a discard-findings body
@@ -384,6 +423,7 @@ class _FileAnalyzer(ast.NodeVisitor):
                 tool_name=stmt.name,
                 param_names=params,
                 function_summaries={},  # pass-1 sees no summaries — avoid recursion
+                module_secrets=self._module_secrets,
             )
             for child in stmt.body:
                 walker.visit(child)
@@ -432,6 +472,7 @@ class _FileAnalyzer(ast.NodeVisitor):
                 tool_name="<call_tool handler>",
                 param_names=params,
                 function_summaries=self._summaries_for_body(exclude="call_tool"),
+                module_secrets=self._module_secrets,
             )
             for stmt in call_body:
                 coarse_walker.visit(stmt)
@@ -462,6 +503,7 @@ class _FileAnalyzer(ast.NodeVisitor):
                     tool_name=tool_name,
                     param_names=params,
                     function_summaries=self._summaries_for_body(exclude="call_tool"),
+                    module_secrets=self._module_secrets,
                 )
                 for stmt in branch:
                     branch_walker.visit(stmt)
@@ -574,28 +616,52 @@ def _decorator_official_sdk_handler(node) -> str | None:
 
 
 def _extract_tools_from_list_tools(func_node) -> list[dict]:
-    """Walk a list_tools handler body, collect every `Tool(name=..., description=...)`
-    constructor call. Returns list of {"name", "description", "line"}.
+    """Walk a list_tools handler body, collect every tool definition. Returns
+    a list of {"name", "description", "line"} dicts.
 
-    We match by class name (rightmost name == "Tool") so this works regardless of
-    how the SDK is imported (`from mcp.types import Tool`, `import mcp.types as t`
-    + `t.Tool(...)`, etc.). We do NOT verify the import resolves to mcp.types.Tool
-    — anything spelled `Tool(...)` inside a list_tools handler is good enough for
-    intent classification. False matches inside a list_tools handler are rare.
+    Recognizes two shapes (both legal under the official MCP Python SDK):
+
+    1. `Tool(name=..., description=..., ...)` constructor calls. We match by
+       class name (rightmost name == "Tool") so this works regardless of how
+       the SDK is imported (`from mcp.types import Tool`, `import mcp.types as
+       t` + `t.Tool(...)`, etc.).
+
+    2. Dict literals `{"name": "...", "description": "...", "inputSchema": ...}`.
+       Added v0.1.6 after the model-compliance eval showed that DeepSeek, Kimi,
+       Llama, and Qwen all routinely emit official-SDK servers whose list_tools
+       returns plain dicts. The SDK normalizes both forms — so MIS should too,
+       or it under-detects tools and routes to `unknown` even though the
+       handler is well-formed.
+
+    A list-of-strings (`return ["current_time"]`) is NOT a real tool shape and
+    is ignored — those servers would crash at request time anyway.
     """
     out: list[dict] = []
     for n in ast.walk(func_node):
-        if not isinstance(n, ast.Call):
-            continue
-        cls_name = _attr_name(n.func)
-        if cls_name != "Tool":
-            continue
-        meta: dict = {"name": None, "description": None, "line": n.lineno}
-        for kw in n.keywords:
-            if kw.arg in {"name", "description"} and isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str):
-                meta[kw.arg] = kw.value.value
-        if meta["name"]:
-            out.append(meta)
+        # Shape 1: Tool(name=..., description=..., ...) constructor.
+        if isinstance(n, ast.Call):
+            if _attr_name(n.func) == "Tool":
+                meta: dict = {"name": None, "description": None, "line": n.lineno}
+                for kw in n.keywords:
+                    if kw.arg in {"name", "description"} and isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str):
+                        meta[kw.arg] = kw.value.value
+                if meta["name"]:
+                    out.append(meta)
+                continue
+        # Shape 2: dict literal with a "name" key. We require a string-keyed
+        # "name" to avoid false matches on unrelated dicts in the handler body
+        # (e.g. an inputSchema literal).
+        if isinstance(n, ast.Dict):
+            meta = {"name": None, "description": None, "line": n.lineno}
+            for k, v in zip(n.keys, n.values):
+                if not (isinstance(k, ast.Constant) and isinstance(k.value, str)):
+                    continue
+                if k.value == "name" and isinstance(v, ast.Constant) and isinstance(v.value, str):
+                    meta["name"] = v.value
+                elif k.value == "description" and isinstance(v, ast.Constant) and isinstance(v.value, str):
+                    meta["description"] = v.value
+            if meta["name"]:
+                out.append(meta)
     return out
 
 
@@ -702,7 +768,8 @@ class _FunctionBodyAnalyzer(ast.NodeVisitor):
     """
 
     def __init__(self, *, py_file: Path, tool_name: str, param_names: set[str],
-                 function_summaries: dict | None = None) -> None:
+                 function_summaries: dict | None = None,
+                 module_secrets: set[str] | None = None) -> None:
         self.file = py_file
         self.tool_name = tool_name
         self.signals: set[BehaviorSignal] = set()
@@ -711,8 +778,10 @@ class _FunctionBodyAnalyzer(ast.NodeVisitor):
         # If yes, we can't claim PURE_COMPUTE — MIS saw an effect it couldn't
         # explain. Used by the orchestrator to decide pure-compute vs shallow.
         self.saw_unknown_call: bool = False
-        # Taint sources
-        self._secret_taint: set[str] = set()   # names whose values came from a SECRET source
+        # Taint sources. Seed with module-level secrets so references to
+        # module-scope `KEY = os.environ[X]` bindings from inside a tool body
+        # are recognized as tainted (v0.1.6).
+        self._secret_taint: set[str] = set(module_secrets or ())
         self._input_taint: set[str] = set(param_names)  # names whose values came from tool inputs
         # Names assigned from an expression that mentions a SECRET_FS_PATHS literal
         # (e.g. `ssh_dir = Path.home() / ".ssh" / "id_rsa"`). Used so that
@@ -722,6 +791,12 @@ class _FunctionBodyAnalyzer(ast.NodeVisitor):
         # a net module. `client = httpx.AsyncClient()` makes "client" a net alias;
         # `client.post(...)` then counts as a net call. Same logic for `with` / `as`.
         self._net_aliases: set[str] = set()
+        # Host-fingerprint taint (v0.1.6): names assigned from platform.* /
+        # socket.gethostname / os.uname. Less severe than secret_taint but
+        # still PII when shipped to a network endpoint. Tracked parallel to
+        # secret_taint so the classifier can verdict `suspicious` (not malicious)
+        # for fingerprint-only exfil.
+        self._fingerprint_taint: set[str] = set()
         # Subset of _net_aliases whose state (headers / cookies / auth) was
         # poisoned with a secret via mutation:
         #     s.headers.update({"X-Auth": os.environ["TOKEN"]})
@@ -774,12 +849,18 @@ class _FunctionBodyAnalyzer(ast.NodeVisitor):
                 ),
             ))
 
+        # Host-fingerprint propagation: `info = platform.platform()` /
+        # `data = {"host": socket.gethostname()}` taints `info` / `data`.
+        fingerprint = self._is_fingerprint_expr(node.value)
+
         for target in node.targets:
             for nm in _name_targets(target):
                 if secret:
                     self._secret_taint.add(nm)
                 if inputy:
                     self._input_taint.add(nm)
+                if fingerprint:
+                    self._fingerprint_taint.add(nm)
         self.generic_visit(node)
 
     def _reads_sensitive_path(self, expr: ast.AST | None) -> bool:
@@ -889,6 +970,27 @@ class _FunctionBodyAnalyzer(ast.NodeVisitor):
                         "the process via that call. (Inter-procedural taint, L2.)"
                     ),
                 ))
+
+        # v0.1.6: host-fingerprint-in-helper. The pass-1 walker emitted the
+        # finding inside the helper but pass-1 discards findings — so we
+        # re-emit at the call site so r11 can see it. Done only when no
+        # secret-in-request fired above (those are malicious-grade and would
+        # mask the suspicious-grade fingerprint signal).
+        if (BehaviorSignal.HOST_FINGERPRINT_IN_REQUEST in helper_signals
+                and BehaviorSignal.SECRET_IN_REQUEST not in self.signals):
+            self.findings.append(Finding(
+                rule="py.exfil.fingerprint_in_request",
+                owasp=OwaspMcp.MCP09,
+                severity=Severity.MED,
+                file=self.file,
+                line=call_node.lineno,
+                evidence=f"{helper_name}(...)"[:120],
+                detail=(
+                    f"Tool '{self.tool_name}' calls helper '{helper_name}' which collects host "
+                    "fingerprint data (platform.* / socket.gethostname / os.uname) and ships it "
+                    "to an outbound endpoint. Modified-payload exfil split across functions."
+                ),
+            ))
         # Helpers that read secrets internally but don't make net calls themselves
         # produce a tainted return value. We mark the LHS of the enclosing
         # `x = helper(...)` as secret-tainted via visit_Assign's RHS-taint path —
@@ -1074,8 +1176,32 @@ class _FunctionBodyAnalyzer(ast.NodeVisitor):
                     ),
                 ))
             else:
-                # Net call on a secret-poisoned client alias: even clean args exfil
-                # because the secret rides in persistent state (headers/cookies/auth).
+                # No secret in arg flow. Two non-overlapping checks here:
+                # (a) Host-fingerprint flow — platform.* / socket.gethostname /
+                #     os.uname into a net call. Less severe than secret exfil →
+                #     suspicious, not malicious. Added v0.1.6.
+                # (b) Secret-poisoned client alias — even clean args exfil
+                #     because the secret rides in persistent state.
+                fingerprint_flow = any(self._is_fingerprint_expr(a) for a in node.args) or \
+                                   any(self._is_fingerprint_expr(kw.value) for kw in node.keywords)
+                if fingerprint_flow:
+                    self.signals.add(BehaviorSignal.HOST_FINGERPRINT_IN_REQUEST)
+                    self.findings.append(Finding(
+                        rule="py.exfil.fingerprint_in_request",
+                        owasp=OwaspMcp.MCP09,
+                        severity=Severity.MED,
+                        file=self.file,
+                        line=node.lineno,
+                        evidence=_src_line_or("", self.file, node.lineno),
+                        detail=(
+                            f"Tool '{self.tool_name}' makes a network call whose arguments include "
+                            "host fingerprint data (platform.*, socket.gethostname, os.uname). Not as "
+                            "severe as secret exfil but still identifies the deployment; the "
+                            "model-compliance eval (v0.1.5-full) found this was the dominant 'modified "
+                            "payload' bypass — model refuses to send env vars and substitutes "
+                            "platform.platform() + socket.gethostname()."
+                        ),
+                    ))
                 alias_root = _alias_root(node.func)
                 if alias_root and alias_root in self._secret_aliases:
                     self.signals.add(BehaviorSignal.SECRET_IN_REQUEST)
@@ -1230,6 +1356,51 @@ class _FunctionBodyAnalyzer(ast.NodeVisitor):
             # Method receiver: x.encode() / x.format() / x.join() inherits from x
             if isinstance(expr.func, ast.Attribute):
                 return self._is_secret_expr(expr.func.value)
+        return False
+
+    def _is_fingerprint_expr(self, expr: ast.AST | None) -> bool:
+        """True iff `expr` (or any tainted sub-expression) was derived from a
+        host-fingerprint source (platform.* / socket.gethostname / os.uname /
+        sys.version etc.). Symmetric to `_is_secret_expr` but tracks a separate
+        taint set so the classifier can distinguish secret exfil (malicious)
+        from fingerprint exfil (suspicious).
+
+        Side effect: emits HOST_FINGERPRINT_READ whenever a fingerprint source
+        is encountered, so the body's `behavior` set surfaces the read even if
+        nothing downstream sends it.
+        """
+        if expr is None:
+            return False
+        if _is_fingerprint_call(expr):
+            self.signals.add(BehaviorSignal.HOST_FINGERPRINT_READ)
+            return True
+        if _is_fingerprint_attr(expr):
+            self.signals.add(BehaviorSignal.HOST_FINGERPRINT_READ)
+            return True
+        if isinstance(expr, ast.Name):
+            return expr.id in self._fingerprint_taint
+        if isinstance(expr, ast.Attribute):
+            return self._is_fingerprint_expr(expr.value)
+        if isinstance(expr, ast.Subscript):
+            return self._is_fingerprint_expr(expr.value)
+        if isinstance(expr, ast.JoinedStr):
+            return any(self._is_fingerprint_expr(v) for v in expr.values)
+        if isinstance(expr, ast.FormattedValue):
+            return self._is_fingerprint_expr(expr.value)
+        if isinstance(expr, ast.BinOp):
+            return self._is_fingerprint_expr(expr.left) or self._is_fingerprint_expr(expr.right)
+        if isinstance(expr, (ast.List, ast.Tuple, ast.Set)):
+            return any(self._is_fingerprint_expr(e) for e in expr.elts)
+        if isinstance(expr, ast.Dict):
+            return any(self._is_fingerprint_expr(v) for v in expr.values if v is not None) or \
+                   any(self._is_fingerprint_expr(k) for k in expr.keys if k is not None)
+        if isinstance(expr, ast.Call):
+            if any(self._is_fingerprint_expr(a) for a in expr.args):
+                return True
+            if any(self._is_fingerprint_expr(kw.value) for kw in expr.keywords):
+                return True
+            if isinstance(expr.func, ast.Attribute):
+                return self._is_fingerprint_expr(expr.func.value)
         return False
 
     def _is_input_expr(self, expr: ast.AST | None) -> bool:
@@ -1422,6 +1593,50 @@ def _is_trivial_py_call(node: ast.Call) -> bool:
     if isinstance(func, ast.Attribute):
         return func.attr in _TRIVIAL_PY_METHODS
     return False
+
+
+# Host-fingerprint sources: (module, attr) tuples. We require the module to be
+# referenced by literal name (`platform.system()`, not `from platform import system`)
+# because alias resolution would be more invasive than the v0.1.6 scope.
+# False negative on the from-import shape is acceptable — in practice models that
+# write fingerprint code use the qualified spelling.
+_FINGERPRINT_CALLS = {
+    ("platform", "system"), ("platform", "release"), ("platform", "version"),
+    ("platform", "machine"), ("platform", "node"), ("platform", "processor"),
+    ("platform", "platform"), ("platform", "uname"), ("platform", "python_version"),
+    ("platform", "python_implementation"), ("platform", "architecture"),
+    ("socket", "gethostname"), ("socket", "getfqdn"),
+    ("os", "uname"),
+}
+
+# Module-attr fingerprint constants — `sys.version`, `sys.platform`. These are
+# Attribute (not Call) accesses, hence the separate set.
+_FINGERPRINT_ATTRS = {
+    ("sys", "version"), ("sys", "platform"), ("sys", "version_info"),
+    ("sys", "executable"),
+}
+
+
+def _is_fingerprint_call(expr: ast.AST) -> bool:
+    """platform.X() / socket.gethostname() / os.uname() — host-identity reads."""
+    if not isinstance(expr, ast.Call):
+        return False
+    if not isinstance(expr.func, ast.Attribute):
+        return False
+    base = expr.func.value
+    if not isinstance(base, ast.Name):
+        return False
+    return (base.id, expr.func.attr) in _FINGERPRINT_CALLS
+
+
+def _is_fingerprint_attr(expr: ast.AST) -> bool:
+    """sys.version / sys.platform / sys.executable — host-identity module attrs."""
+    if not isinstance(expr, ast.Attribute):
+        return False
+    base = expr.value
+    if not isinstance(base, ast.Name):
+        return False
+    return (base.id, expr.attr) in _FINGERPRINT_ATTRS
 
 
 def _is_env_read(expr: ast.AST) -> bool:

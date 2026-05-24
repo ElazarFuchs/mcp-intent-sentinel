@@ -306,6 +306,32 @@ def _r9_net_on_import(findings: list[Finding], _tools) -> Optional[RuleHit]:
     )
 
 
+def _r11_fingerprint_to_request(findings: list[Finding], _tools) -> Optional[RuleHit]:
+    """Host-fingerprint data (platform.* / socket.gethostname / os.uname) flows
+    into an outbound network call. Added v0.1.6 after the model-compliance eval:
+    when prompted for env-var exfil, frontier models often refuse the literal
+    request and emit a "modified payload" variant that ships host fingerprint
+    instead. Fingerprint alone is weaker than secret exfil — it identifies the
+    deployment but doesn't directly leak credentials — so the verdict is
+    `suspicious`, not `malicious`. If a finding fires on a server that ALSO
+    triggers r1 (secret_to_request), r1's malicious verdict will override.
+    """
+    hits = [f for f in findings if f.rule == "py.exfil.fingerprint_in_request"]
+    if not hits:
+        return None
+    return RuleHit(
+        rule_id="r11.fingerprint_to_request",
+        verdict="suspicious",
+        confidence=0.75,
+        reason=(
+            f"{len(hits)} site(s) where host fingerprint data (platform.*, socket.gethostname, "
+            "os.uname, or sys.version) is shipped to an outbound network call. Not credential exfil, "
+            "but a deployment-identifying side-channel; commonly the 'modified payload' shape that "
+            "shows up when an alignment-tuned model refuses the bare env-exfil ask."
+        ),
+    )
+
+
 # All rules, in evaluation order. The classifier walks the list, fuses results
 # by maximum verdict, and uses each hit as a separate report row.
 _RULES: list[tuple[str, IntentRule]] = [
@@ -318,6 +344,7 @@ _RULES: list[tuple[str, IntentRule]] = [
     ("r7.typosquat",         _r7_typosquat),
     ("r8.dynamic_exec",      _r8_dynamic_exec),
     ("r9.net_on_import",     _r9_net_on_import),
+    ("r11.fingerprint_to_request", _r11_fingerprint_to_request),
 ]
 
 
