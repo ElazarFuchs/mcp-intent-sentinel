@@ -1,5 +1,16 @@
 # MCP Intent Sentinel
 
+> **v0.1.6 — model-compliance loop.** Prompted 7 frontier LLMs to generate
+> the 10 malicious-corpus patterns at 3 disguise levels (210 calls). 0% refusal
+> across every model and level. The interesting failure mode: alignment-tuned
+> models often refuse env-var exfil and substitute host fingerprint
+> (`platform.platform()` + `socket.gethostname()`) over the same outbound
+> channel — same beacon, less sensitive payload, slips past env-only scanners.
+> Writeup: [eval/model_compliance/FINDING.md](eval/model_compliance/FINDING.md).
+> New rule `r11.fingerprint_to_request` (verdict `suspicious`) + 3 new fixtures
+> lifted catch rate on `official_sdk_exfil` from 4.8% → 19.0% on the cached
+> dataset, zero regressions.
+
 > **Headline finding (v0.1.5, 51 real public MCP servers from npm + PyPI):**
 > **33 downloaded successfully. Of those, ~9% got a real behavioral verdict
 > (malicious / suspicious / clean-with-extracted-behavior). ~24% were
