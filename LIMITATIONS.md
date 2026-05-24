@@ -1,4 +1,72 @@
-# LIMITATIONS — v0.1.6
+# LIMITATIONS — v0.1.7
+
+## Changes since v0.1.6
+
+A reviewer's critique of the v0.1.5 eval results surfaced three specific FPs
+on real packages from the 51-server registry:
+
+- `mcp-server-kubernetes` → `malicious` via `r6.command_injection` (5 sites).
+  The package's tools EXIST to run kubectl — flagging them is the exact
+  inverse of what intent-aware classification is supposed to do.
+- `@modelcontextprotocol/server-gitlab` → `suspicious` via `r9.net_on_import`.
+  Root cause: the regex `\bnode-fetch\b` in `_NET_PATTERNS` matched the
+  import line `import fetch from "node-fetch"` as if it were a network call.
+- `@notionhq/notion-mcp-server` → `suspicious` via `r9.net_on_import`.
+  Root cause: the file is bundled / minified; every original module body
+  ends up inside one giant top-level IIFE, so "top-level CallExpression"
+  no longer corresponds to "fires at import time" in any meaningful sense.
+
+v0.1.7 ships three targeted fixes:
+
+**Fix A — r6 role-aware (the k8s FP).** `r6.command_injection` now exempts
+tool sets where EVERY tool with `EXEC_SHELL_WITH_INPUT` has
+`declared_intent == "shell"`. `_guess_intent` widened the "shell" bucket
+to recognize kubectl / kubernetes / k8s / docker / container / terraform /
+ansible / helm / systemctl / service / process. A kubectl-runner tool that
+shells out with input now stays benign (the body still emits the signal —
+visibility is preserved — but the verdict suppresses). If even one tool
+with the signal is NOT shell-role, the rule still fires; the rule reason
+names the non-exempt tools so reviewers can see why suppression didn't kick
+in. Coarse-attribution paths (findings exist but no tool carries the
+signal) fall back to firing. Regression fixture:
+`tests/corpus/benign/legit_shell_kubectl`.
+
+**Fix B — `_NET_PATTERNS` regex cleanup (the gitlab FP).** Dropped
+`\bnode-fetch\b` and `\bnodemailer\b` from the regex set in
+`mis/analyzers/js.py`. Those bare-word matches caught import statements
+that named the module. Outbound calls are still detected via
+`\bfetch\s*\(` and `\.sendMail\s*\(` respectively — those require call
+syntax, not just module mention. Regression fixture:
+`tests/corpus/benign/legit_node_fetch_import`.
+
+**Fix C — bundled-file guard (the notion FP).** Both the AST path
+(`js_ast.py:_pass3_top_level_net`) and the regex fallback
+(`js.py:_scan_top_level_net`) now check `_looks_bundled(source)` first —
+any line longer than 500 chars marks the file as bundled, and the
+top-level net scan returns without emitting. The trade-off is documented
+below as L19. The alternative — firing `js.net.on_import` on every
+shipped bundle — was the dominant FP class in the v0.1.5 eval.
+
+## L19 (new) — bundled / minified JS opacity
+
+`js.net.on_import` is suppressed on any source file with a line longer
+than 500 characters, on the theory that bundling collapses every original
+module body into one top-level IIFE so "top-level CallExpression" loses
+its mapping to "fires at import time". A real attacker can hide a beacon
+inside a bundled distribution; v0.1.7 will not catch it via this rule.
+
+The roadmap fix is one of:
+- Unpack bundles (sourcemap-based or heuristic) before scanning.
+- Add a `r19.bundled_with_net` rule that downgrades from suspicious to
+  a coverage-marker verdict ("we can't read this"), similar to how
+  `shallow` works on Python class-based dispatch.
+- Require disclosure: an MCP package whose published `main` is a bundle
+  should ship its sources or its build pipeline (akin to the
+  `setup_dropper` rule for postinstall transparency).
+
+Until one of those lands, treat a bundled main with no plain-source
+counterpart as a verdict-`unknown` floor — same posture as L13/L18 on
+the Python side.
 
 ## Changes since v0.1.5
 

@@ -167,11 +167,26 @@ def _guess_intent(description: str, name: str) -> str:
     text = f"{name} {description}".lower()
     if re.search(r"\b(add|subtract|multiply|divide|sum|average|calculat|arithmetic|math)\b", text):
         return "math"
+    # Devops/shell keywords FIRST — these signal the tool's underlying
+    # mechanism (kubectl, docker, terraform...), which dominates over verb
+    # framing in the description. `kubectl_get_by_name` with description
+    # "Get a Kubernetes resource" pre-v0.1.7-fix would match "get" in the
+    # fetch regex below and resolve to intent=fetch — leaving r6's role
+    # exemption inert and the k8s server still classified malicious.
+    # Order: this block before fetch/file/generic-shell.
+    if re.search(
+        r"\b(kubectl|kubernetes|k8s|docker|container|terraform|ansible|helm|"
+        r"systemctl|systemd|process|pod|namespace|cluster|deployment)\b",
+        text,
+    ):
+        return "shell"
     if re.search(r"\b(fetch|get|download|http|request|url|webpage|scrape)\b", text):
         return "fetch"
     if re.search(r"\b(read|write|file|path|directory|list files?|glob)\b", text):
         return "file"
-    if re.search(r"\b(run|execute|shell|command|bash|powershell|cmd)\b", text):
+    # Generic shell verbs — checked AFTER fetch/file so a "fetch" description
+    # using the word "request" doesn't accidentally land here.
+    if re.search(r"\b(run|execute|shell|command|bash|powershell|cmd|exec)\b", text):
         return "shell"
     if re.search(r"\b(email|mail|smtp|imap|send message|postmark|mailgun)\b", text):
         return "email"

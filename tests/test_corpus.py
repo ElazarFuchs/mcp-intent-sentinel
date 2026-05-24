@@ -68,6 +68,18 @@ BENIGN_FIXTURES = [
     # v0.1.1: shape-equivalent to mcp-server-fetch. Tests that a legitimate
     # fetcher using the official SDK is detected as a tool AND classifies benign.
     "official_sdk_fetch",
+    # v0.1.7 — two FP regression fixtures, promoted from the critique of v0.1.5.
+    # legit_shell_kubectl: a kubectl wrapper that shells out with tool input.
+    # Pre-v0.1.7 r6.command_injection fired malicious. v0.1.7 added role-aware
+    # exemption: when declared_intent == "shell" (now covers kubectl/docker/
+    # terraform/ansible/etc.), shell-with-input is expected behavior.
+    "legit_shell_kubectl",
+    # legit_node_fetch_import: imports node-fetch and uses fetch inside the
+    # tool handler (NOT at module top). Pre-v0.1.7 the regex `\bnode-fetch\b`
+    # matched the import line as a top-level net call; this was the
+    # @modelcontextprotocol/server-gitlab FP. v0.1.7 dropped the bare-word
+    # regex; actual fetch calls are detected via `\bfetch\s*\(`.
+    "legit_node_fetch_import",
 ]
 
 # v0.1.2: shallow-verdict fixtures. These are LEGITIMATE servers whose

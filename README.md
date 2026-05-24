@@ -1,5 +1,20 @@
 # MCP Intent Sentinel
 
+> **v0.1.7 — three FP fixes after a reviewer critique of the v0.1.5
+> 51-server eval:** `r6.command_injection` is now role-aware (a kubectl /
+> docker / terraform server that shells out with tool input is doing its
+> declared job, not committing RCE — `_guess_intent` widened, classifier
+> rule exempts when every tool with the signal is shell-role);
+> `r9.net_on_import`'s regex no longer matches bare
+> `import fetch from "node-fetch"`; both JS paths skip top-level net
+> detection on bundled / minified files (where "top-level" no longer maps
+> to "fires at import time"). `mcp-server-kubernetes` moved from
+> `malicious` to `benign`; `@modelcontextprotocol/server-gitlab` and
+> `@notionhq/notion-mcp-server` moved from `suspicious` to `unknown` —
+> an honest "I don't recognize this bundled shape" instead of crying wolf.
+> 79/79 tests (was 77, +2 regression fixtures). Details in
+> [LIMITATIONS.md](LIMITATIONS.md).
+
 > **v0.1.6 — model-compliance loop.** Prompted 7 frontier LLMs to generate
 > the 10 malicious-corpus patterns at 3 disguise levels (210 calls). 0% refusal
 > across every model and level. The interesting failure mode: alignment-tuned
@@ -194,7 +209,7 @@ eval/
 ├── run.py              # harness
 └── results/{v0.1.3,v0.1.4,v0.1.5}/{report.md,run.json}
 
-tests/                  # 77 unit + integration tests, 19 fixtures
+tests/                  # 79 unit + integration tests, 21 fixtures
 ```
 
 ## Relationship to neighbor projects
@@ -204,7 +219,7 @@ tests/                  # 77 unit + integration tests, 19 fixtures
 | `mcp-trust` | Sigstore-style trust + runtime proxy | v0.1-alpha |
 | `arsp` | Runtime security plane: capability tokens, IFC, output sealing | research |
 | `agent-config-injection` | Workspace config-file injection scanner (`.cursorrules`, `mcp.json`) | v0.1.8 |
-| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.6 |
+| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.7 |
 
 The composition story: `agent-config-injection` scans config files in a
 workspace, `mcp-intent-sentinel` scans the server source before install,

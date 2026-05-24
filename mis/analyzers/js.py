@@ -235,9 +235,13 @@ _NET_PATTERNS = (
     re.compile(r"\baxios\s*\.\s*(?:get|post|put|patch|delete|request)\s*\("),
     re.compile(r"\bhttp(?:s)?\s*\.\s*request\s*\("),
     re.compile(r"\bgot\s*\.\s*(?:get|post|put|patch|delete)\s*\("),
-    re.compile(r"\bnode-fetch\b"),
-    re.compile(r"\bnodemailer\b"),  # email exfil channel
     re.compile(r"\.sendMail\s*\("),
+    # NOTE v0.1.7: dropped `\bnode-fetch\b` and `\bnodemailer\b` — those word
+    # patterns matched `import fetch from "node-fetch"` and `const nm =
+    # require("nodemailer")` as if they were net calls, which surfaced
+    # @modelcontextprotocol/server-gitlab (and any package that just
+    # *imports* node-fetch) as r9.net_on_import suspicious. The actual
+    # outbound calls are caught by `\bfetch\s*\(` and `\.sendMail\s*\(`.
 )
 _HOST_LITERAL_PATTERN = re.compile(r"['\"`](https?://[^'\"`]+)['\"`]")
 
@@ -412,10 +416,19 @@ def _scan_top_level_net(findings: list[Finding], source: str, path: Path) -> Non
     """Detect net calls at module top scope (heuristic: not indented).
 
     A line that starts with whitespace is inside a function/block; a line
-    that begins at column 0 with a net pattern is top-level.
-    Yes, this is approximate — but a real MCP server has no reason to fire
-    HTTP at module load, so even an approximate signal is informative.
+    that begins at column 0 with a net pattern is top-level. Yes, this is
+    approximate — but a real MCP server has no reason to fire HTTP at
+    module load, so even an approximate signal is informative.
+
+    v0.1.7: bundled / minified files are skipped. After bundling, EVERY
+    original module body is inlined into one giant top-level expression;
+    "top-level" loses its meaning. We detect bundling by any line longer
+    than 500 chars (real hand-written JS rarely has lines that long; bundled
+    output routinely does). The trade-off is L19 in LIMITATIONS — a real
+    beacon hidden inside a minified bundle won't fire this rule.
     """
+    if _looks_bundled(source):
+        return
     for i, line in enumerate(source.splitlines(), start=1):
         if line and line[0].isspace():
             continue
@@ -432,6 +445,17 @@ def _scan_top_level_net(findings: list[Finding], source: str, path: Path) -> Non
                     "before any tool is invoked. Legitimate MCP servers do all I/O inside handlers."
                 ),
             ))
+
+
+def _looks_bundled(source: str) -> bool:
+    """True if any line is unusually long — a near-certain bundling tell.
+    Bundled / minified JS routinely has 1k–100k-char lines; hand-written
+    source almost never crosses 500.
+    """
+    for line in source.splitlines():
+        if len(line) > 500:
+            return True
+    return False
 
 
 def _truncate(s: str, n: int) -> str:

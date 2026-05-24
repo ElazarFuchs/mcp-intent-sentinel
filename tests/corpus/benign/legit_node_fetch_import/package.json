@@ -1,0 +1,6 @@
+{
+  "name": "weather-mcp-example",
+  "version": "0.1.0",
+  "description": "Weather lookup tool for MCP",
+  "main": "index.js"
+}

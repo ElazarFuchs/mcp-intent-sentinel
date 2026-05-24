@@ -515,6 +515,17 @@ class _JsModuleAnalyzer:
         # Top-level: any ExpressionStatement whose expression is a CallExpression
         # we identify as net. (Don't recurse into function bodies — only direct
         # module-level effects.)
+        #
+        # v0.1.7: skip bundled / minified files. Webpack / esbuild / rollup
+        # output collapses every original module into one top-level IIFE, so
+        # "top-level CallExpression" no longer maps to "runs at import time" —
+        # it maps to "is part of the bundler's entry-point invocation". A real
+        # beacon hidden in bundled output won't fire this rule. Trade-off
+        # tracked as L19; the alternative (firing on every bundle) is the
+        # @modelcontextprotocol/server-gitlab / @notionhq/notion-mcp-server
+        # FPs we ate in v0.1.5 / v0.1.6.
+        if any(len(line) > 500 for line in self.source.splitlines()):
+            return
         for stmt in body:
             t = getattr(stmt, "type", None)
             if t == "ExpressionStatement":

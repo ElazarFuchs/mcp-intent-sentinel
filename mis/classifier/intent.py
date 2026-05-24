@@ -241,11 +241,40 @@ def _r5_tool_poisoning(findings: list[Finding], tools: list[ToolProfile]) -> Opt
     )
 
 
-def _r6_command_injection(findings: list[Finding], _tools) -> Optional[RuleHit]:
-    """Tool input flows into shell exec."""
+def _r6_command_injection(findings: list[Finding], tools: list[ToolProfile]) -> Optional[RuleHit]:
+    """Tool input flows into shell exec.
+
+    Role-aware (v0.1.7): if EVERY tool with EXEC_SHELL_WITH_INPUT declares
+    itself as a shell/devops role (kubectl, docker, terraform, ansible, bash,
+    cmd, etc. — see _guess_intent), the rule does NOT fire. Those servers
+    exist specifically to run user-supplied commands; their declared purpose
+    explicitly endorses the behavior r6 was designed to catch on tools that
+    declared themselves as something else (math, search, format).
+
+    If at least one non-shell-role tool has the signal, the rule still fires
+    on the whole set. If we can't link findings to tools at all (coarse-
+    attribution path), we fall back to firing — better a FP that's reviewable
+    than a missed exfil. Tracked in LIMITATIONS L11.x.
+    """
     hits = [f for f in findings if f.rule == "py.exec.shell_with_input"]
     if not hits:
         return None
+
+    # v0.1.7 role-aware exemption.
+    SHELL_ROLE_INTENTS = {"shell"}
+    tools_w_signal = [t for t in tools if BehaviorSignal.EXEC_SHELL_WITH_INPUT in t.behavior]
+    non_exempt = [t for t in tools_w_signal if t.declared_intent not in SHELL_ROLE_INTENTS]
+    if tools_w_signal and not non_exempt:
+        # Every tool with the signal is a shell/devops role tool. Suppress.
+        return None
+
+    # Compose the reason. If we DO have non-exempt tools, name them so the
+    # report explains why the suppression didn't kick in.
+    name_hint = ""
+    if non_exempt:
+        names = [f"'{t.name}' (declared as {t.declared_intent})" for t in non_exempt[:3]]
+        name_hint = f" Non-shell-role tools involved: {', '.join(names)}."
+
     return RuleHit(
         rule_id="r6.command_injection",
         verdict="malicious",
@@ -253,7 +282,7 @@ def _r6_command_injection(findings: list[Finding], _tools) -> Optional[RuleHit]:
         reason=(
             f"{len(hits)} site(s) where tool-input data flows into a shell/subprocess call. "
             "If the command is built via string concatenation or shell=True, this is a "
-            "command-injection sink the LLM controls (MCP05)."
+            "command-injection sink the LLM controls (MCP05)." + name_hint
         ),
     )
 
