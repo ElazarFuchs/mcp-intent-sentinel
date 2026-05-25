@@ -40,7 +40,7 @@ from mis.classifier.intent import classify
 from mis.extractors import extract, ExtractionError
 from mis.findings import ScanResult
 
-from eval.llm_fallback.analyzer import analyze as llm_analyze
+from eval.llm_fallback.analyzer import analyze as llm_analyze, analyze_with_union
 
 
 def _now_iso() -> str:
@@ -101,8 +101,13 @@ def _classify_with_profiles(profiles: list[ToolProfile]) -> tuple[str, list[str]
     )
 
 
-def _process(rec: dict, *, api_key: str) -> dict:
-    """Run extraction + LLM + classification on a single eval row."""
+def _process(rec: dict, *, api_key: str, secondary_model: str | None = None) -> dict:
+    """Run extraction + LLM + classification on a single eval row.
+
+    v0.1.17 — when `secondary_model` is provided, the LLM extraction uses
+    `analyze_with_union` (silent-omission defense per L22). Otherwise a
+    single-model `analyze` call (legacy behavior).
+    """
     source = rec["source"]
     out: dict = {
         "name": rec["name"],
@@ -130,7 +135,21 @@ def _process(rec: dict, *, api_key: str) -> dict:
     # Step 1: extract the package source to a temp dir.
     try:
         with extract(source) as extracted:
-            ext = llm_analyze(Path(extracted.root), api_key=api_key)
+            if secondary_model:
+                # Multi-model union — silent-omission defense (L22).
+                # Uses the analyzer's DEFAULT_MODEL as primary unless the
+                # caller has overridden; we don't expose --primary-model
+                # in the pilot because the default has been the baseline
+                # for every prior pilot run and we want apples-to-apples.
+                from eval.llm_fallback.analyzer import DEFAULT_MODEL
+                ext = analyze_with_union(
+                    Path(extracted.root),
+                    primary_model=DEFAULT_MODEL,
+                    secondary_model=secondary_model,
+                    api_key=api_key,
+                )
+            else:
+                ext = llm_analyze(Path(extracted.root), api_key=api_key)
     except ExtractionError as e:
         out["extraction_error"] = f"ExtractionError: {e}"
         return out
@@ -241,6 +260,16 @@ def main() -> int:
     ap.add_argument("--include-shallow", action="store_true")
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--api-key", default=None)
+    ap.add_argument(
+        "--secondary-model",
+        default=None,
+        help=(
+            "v0.1.17 — when set, run LLM extraction on BOTH models and UNION "
+            "the tool/signal sets (silent-omission defense, L22). Example: "
+            "--secondary-model openai/gpt-5. Doubles per-call cost; intended "
+            "for high-stakes pilot runs, not the default."
+        ),
+    )
     args = ap.parse_args()
 
     src = Path(args.inp)
@@ -271,7 +300,7 @@ def main() -> int:
     t0 = time.time()
     rows: list[dict] = []
     for i, rec in enumerate(cohort, 1):
-        result = _process(rec, api_key=api_key)
+        result = _process(rec, api_key=api_key, secondary_model=args.secondary_model)
         rows.append(result)
         # Persist after every row so a mid-run crash leaves a usable partial.
         (out_dir / "pilot.json").write_text(json.dumps(rows, indent=2, ensure_ascii=False), encoding="utf-8")

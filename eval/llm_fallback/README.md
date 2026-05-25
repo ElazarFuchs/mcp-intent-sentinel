@@ -111,22 +111,56 @@ python -m eval.llm_fallback.pilot \
     --out eval/llm_fallback/results/my-pilot
 # Add --include-shallow to also try to lift shallow rows.
 # Add --limit N to cap the cohort during smoke runs.
+
+# v0.1.17 — multi-model UNION extraction (silent-omission defense, L22):
+python -m eval.llm_fallback.pilot \
+    --secondary-model openai/gpt-5 \
+    --out eval/llm_fallback/results/union-pilot
+# Doubles per-call cost; runs both Claude (default primary) and the
+# named secondary and UNIONS the tool / signal extractions.
 ```
 
 The pilot writes one record per attempted row after every call; if you
 kill it mid-sweep the `pilot.json` is still valid.
 
+## v0.1.17 multi-model UNION mode
+
+`analyze_with_union(source_root, primary_model, secondary_model)` runs
+the LLM extractor twice and unions the resulting tools+signals — kept
+if EITHER model emitted it. UNION not intersection: an attacker who
+prompt-injects model A into dropping a signal still has model B emit
+it; intersection would amplify the injection by requiring both models
+to be honest.
+
+Trade-off: UNION amplifies hallucination FPs. Mitigations:
+- The closed-enum filter (BehaviorSignal enum membership) stays — the
+  LLMs can only emit signals from the enum, so "hallucination" is
+  bounded to known categories.
+- Provenance is preserved in `extraction_notes`:
+  `models=A+B; both=N1; primary-only=N2; secondary-only=N3`.
+  A signal that appears only in primary-only / secondary-only is a
+  candidate for "this is a single-model claim" review.
+- Classifier verdict bounds still apply — even an FP-amplified signal
+  only escalates as far as its rule allows.
+
+Smoke run at `results/v0.1.17-union-smoke/`: claude-sonnet-4.5 +
+openai/gpt-5 on 2 unknown packages; both models agreed on all
+extracted tools (no silent-omission detected on these specific cases —
+the defense's *machinery* is in place but the *test* against
+adversarial sources is L22-extended).
+
 ## Roadmap from here
 
-1. **L23 — role-aware r4** (close the FPs surfaced here).
-2. **Wire-in to `mis.engine.scan()`** behind a `--with-llm-fallback` flag,
-   so users can opt into the LLM path explicitly.
+1. **L22-extended** — hostile-prompt fixtures that PROVABLY inject one
+   model so the union defense is empirically validated rather than
+   architecturally claimed.
+2. **Wire-in to `mis.engine.scan()`** behind a `--with-llm-fallback`
+   flag, so users can opt into the LLM path explicitly.
 3. **Caching** — `source_signature()` already produces a content hash;
    wrapping the pilot in a content-addressed cache means re-runs don't
    re-pay.
 4. **Larger truncation budget for bundled files** — currently 120k chars
-   misses the second half of notion's bundle. Two paths: (a) detect bundled
-   shape and do a second-pass focused extraction on `server.tool(` / SDK
-   call sites; (b) chunked extraction with multi-call merge.
-5. **Multi-model agreement** — run two models, only accept signals where
-   both agree (drops the silent-failure adversarial risk).
+   misses the second half of notion's bundle. Two paths: (a) detect
+   bundled shape and do a second-pass focused extraction on
+   `server.tool(` / SDK call sites; (b) chunked extraction with
+   multi-call merge.

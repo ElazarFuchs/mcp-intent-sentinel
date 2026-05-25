@@ -427,6 +427,133 @@ def analyze(
     )
 
 
+def analyze_with_union(
+    source_root: Path,
+    *,
+    primary_model: str,
+    secondary_model: str,
+    api_key: str | None = None,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+    timeout: int = DEFAULT_TIMEOUT,
+) -> ExtractedSignals:
+    """Multi-model UNION extraction — silent-omission defense (L22).
+
+    Runs `analyze()` twice — once on `primary_model`, once on `secondary_model`
+    — and UNIONS the resulting tool / signal sets.
+
+    The semantic is "if EITHER model thinks the tool / signal is there, we
+    keep it." This is the silent-omission defense: a source that successfully
+    prompt-injects model A into dropping a SECRET_ENV_READ signal still has
+    model B emit it; the union preserves the signal so the classifier sees
+    it. Intersection would have the opposite effect — it would amplify the
+    injection by requiring both models to be honest. UNION is what closes
+    L22's silent-omission attack vector.
+
+    Trade-off — UNION amplifies hallucination FPs. If model A hallucinates
+    a signal that model B doesn't, we emit it. Mitigations:
+      - The closed-enum parser still drops any signal outside BehaviorSignal,
+        so the LLM can only hallucinate things in the enum (not arbitrary).
+      - The classifier verdict for any FP-amplified signal is still bounded
+        by the rule (suspicious for fingerprint, malicious for secret).
+      - The user reviewing the verdict can see provenance:
+        `extraction_notes` indicates which models contributed.
+
+    Returns an ExtractedSignals with tools=union and extraction_notes
+    describing the union outcome. `model` is set to `primary+secondary` for
+    auditability. If either model fails (API/parse error), the returned
+    object surfaces the failure on `api_error` / `parse_error` but still
+    includes whatever was extractable from the model that worked.
+    """
+    primary = analyze(
+        source_root,
+        api_key=api_key,
+        model=primary_model,
+        max_tokens=max_tokens,
+        timeout=timeout,
+    )
+    secondary = analyze(
+        source_root,
+        api_key=api_key,
+        model=secondary_model,
+        max_tokens=max_tokens,
+        timeout=timeout,
+    )
+
+    # Aggregate latency / tokens across both calls so cost is visible.
+    total_latency = (primary.latency_s or 0.0) + (secondary.latency_s or 0.0)
+    total_in = (primary.input_tokens or 0) + (secondary.input_tokens or 0)
+    total_out = (primary.output_tokens or 0) + (secondary.output_tokens or 0)
+    composite_model = f"{primary_model}+{secondary_model}"
+
+    # If both failed, return a clean failure.
+    if (primary.api_error or primary.parse_error) and (secondary.api_error or secondary.parse_error):
+        return ExtractedSignals(
+            api_error=f"both models failed: primary={primary.api_error or primary.parse_error}; "
+                      f"secondary={secondary.api_error or secondary.parse_error}",
+            latency_s=total_latency,
+            input_tokens=total_in,
+            output_tokens=total_out,
+            model=composite_model,
+        )
+
+    # UNION by tool name. If both models emit a tool with the same name, we
+    # union their signals. If only one emits, we keep that one's signals
+    # entirely (silent-omission defense).
+    primary_tools = {t["name"]: t for t in primary.tools}
+    secondary_tools = {t["name"]: t for t in secondary.tools}
+    all_names = sorted(set(primary_tools) | set(secondary_tools))
+
+    union_tools: list[dict] = []
+    n_both = 0
+    n_primary_only = 0
+    n_secondary_only = 0
+    for name in all_names:
+        p = primary_tools.get(name)
+        s = secondary_tools.get(name)
+        if p and s:
+            n_both += 1
+            p_sigs = set(p.get("behavior_signals", []))
+            s_sigs = set(s.get("behavior_signals", []))
+            union_sigs = sorted(p_sigs | s_sigs)
+            union_tools.append({
+                "name": name,
+                "description": p.get("description", "") or s.get("description", ""),
+                "language": p.get("language", "unknown"),
+                "behavior_signals": union_sigs,
+            })
+        elif p:
+            n_primary_only += 1
+            union_tools.append(dict(p))
+        else:
+            n_secondary_only += 1
+            union_tools.append(dict(s))
+
+    notes_parts = [
+        f"models={composite_model}",
+        f"both={n_both}",
+        f"primary-only={n_primary_only}",
+        f"secondary-only={n_secondary_only}",
+    ]
+    if primary.api_error or primary.parse_error:
+        notes_parts.append(f"primary-fail={primary.api_error or primary.parse_error}")
+    if secondary.api_error or secondary.parse_error:
+        notes_parts.append(f"secondary-fail={secondary.api_error or secondary.parse_error}")
+    if primary.extraction_notes:
+        notes_parts.append(f"primary-notes={primary.extraction_notes}")
+    if secondary.extraction_notes:
+        notes_parts.append(f"secondary-notes={secondary.extraction_notes}")
+
+    return ExtractedSignals(
+        tools=union_tools,
+        extraction_notes="; ".join(notes_parts)[:300],
+        raw_response=(primary.raw_response or "")[:500] + " | " + (secondary.raw_response or "")[:500],
+        latency_s=total_latency,
+        input_tokens=total_in,
+        output_tokens=total_out,
+        model=composite_model,
+    )
+
+
 def source_signature(source_root: Path) -> str:
     """SHA256 over the bundled source. Used as a cache key by the pilot
     driver so re-runs don't re-pay the API."""

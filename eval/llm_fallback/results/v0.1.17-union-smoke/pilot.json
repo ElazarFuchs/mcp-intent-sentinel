@@ -1,0 +1,120 @@
+[
+  {
+    "name": "mcp-server-git",
+    "ecosystem": "pypi",
+    "source": "pypi:mcp-server-git",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "git_add",
+      "git_branch",
+      "git_checkout",
+      "git_commit",
+      "git_create_branch",
+      "git_diff",
+      "git_diff_staged",
+      "git_diff_unstaged",
+      "git_log",
+      "git_reset",
+      "git_show",
+      "git_status"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "git_add",
+        "signals": []
+      },
+      {
+        "tool": "git_branch",
+        "signals": []
+      },
+      {
+        "tool": "git_checkout",
+        "signals": []
+      },
+      {
+        "tool": "git_commit",
+        "signals": []
+      },
+      {
+        "tool": "git_create_branch",
+        "signals": []
+      },
+      {
+        "tool": "git_diff",
+        "signals": []
+      },
+      {
+        "tool": "git_diff_staged",
+        "signals": []
+      },
+      {
+        "tool": "git_diff_unstaged",
+        "signals": []
+      },
+      {
+        "tool": "git_log",
+        "signals": []
+      },
+      {
+        "tool": "git_reset",
+        "signals": []
+      },
+      {
+        "tool": "git_show",
+        "signals": []
+      },
+      {
+        "tool": "git_status",
+        "signals": []
+      }
+    ],
+    "after_verdict": "shallow",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected (12) but MIS extracted ZERO behavior signals from any of them — not even PURE_COMPUTE. This means the analyzer recognized the tool names but failed to follow ANY of their implement",
+    "llm_extraction_notes": "models=anthropic/claude-sonnet-4.5+openai/gpt-5; both=12; primary-only=0; secondary-only=0; primary-notes=Git operations server, all tools operate on local repos via user-supplied paths, no network/secret access; secondary-notes=12 Git tools via mcp.server; helper funcs use GitPython; no net/env/she",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 26.97,
+    "llm_input_tokens": 19185,
+    "llm_output_tokens": 2044,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T14:21:25Z"
+  },
+  {
+    "name": "mcp-server-time",
+    "ecosystem": "pypi",
+    "source": "pypi:mcp-server-time",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "convert_time",
+      "get_current_time"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "convert_time",
+        "signals": []
+      },
+      {
+        "tool": "get_current_time",
+        "signals": []
+      }
+    ],
+    "after_verdict": "shallow",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected (2) but MIS extracted ZERO behavior signals from any of them — not even PURE_COMPUTE. This means the analyzer recognized the tool names but failed to follow ANY of their implementa",
+    "llm_extraction_notes": "models=anthropic/claude-sonnet-4.5+openai/gpt-5; both=2; primary-only=0; secondary-only=0; primary-notes=Pure time/timezone conversion tools, no network or file system access, no secrets handling; secondary-notes=Extracted from server.py; tools listed via list_tools and dispatched in call_tool.",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 51.55,
+    "llm_input_tokens": 16119,
+    "llm_output_tokens": 1172,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T14:22:13Z"
+  }
+]

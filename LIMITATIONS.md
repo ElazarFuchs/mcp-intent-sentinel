@@ -1,4 +1,50 @@
-# LIMITATIONS — v0.1.16
+# LIMITATIONS — v0.1.17
+
+## Changes since v0.1.16
+
+v0.1.17 closes the L22 silent-omission attack vector with multi-model
+UNION extraction.
+
+**`analyze_with_union(source_root, primary_model, secondary_model)`**
+in `eval/llm_fallback/analyzer.py` runs the LLM extractor twice (on two
+different frontier models) and UNIONS the resulting tool / signal sets.
+
+**Why UNION, not intersection.** Intersection ("both models must agree
+to keep a signal") would AMPLIFY the silent-omission attack — an
+attacker who successfully prompt-injects model A into dropping a
+signal would also block it from the output even if model B caught it.
+UNION ("either model is enough to keep") does the opposite: a prompt-
+injection that fools only model A is defeated by model B's honest
+output. Asymmetric: a *successful* injection of both A and B is needed
+to drop a signal, which is materially harder.
+
+**Trade-off.** UNION amplifies hallucination FPs — if model A
+hallucinates a signal that model B doesn't, we keep it. Mitigations
+already in place: closed-enum filter (the LLM can only "hallucinate"
+things in the BehaviorSignal enum, not arbitrary), classifier verdict
+bounds (any FP signal is still verdict-bounded), provenance in
+`extraction_notes` (the report says which models contributed). The
+hallucination-amplification cost was the conscious choice — silent-
+omission is the more dangerous failure mode.
+
+**`pilot.py --secondary-model X`.** Opt-in flag. When set, the pilot
+uses `analyze_with_union` instead of single-model `analyze`. Default
+behavior unchanged (single-model). Cost roughly doubles per row.
+
+**Smoke run (eval/llm_fallback/results/v0.1.17-union-smoke/).**
+Primary=anthropic/claude-sonnet-4.5, secondary=openai/gpt-5. On
+mcp-server-git: both models extracted the same 12 tools (no
+disagreement; both=12 / primary-only=0 / secondary-only=0). On
+mcp-server-time: both extracted the same 2 tools. No silent-omission
+detected on these specific cases — but the machinery is in place to
+catch it on adversarial sources.
+
+**L22-extended (not yet shipped).** Hostile-prompt fixtures — synthetic
+test cases that DO prompt-inject one model — would be the next step to
+empirically validate the union defense. Not in v0.1.17 because building
+provably-injectable prompts is its own R&D project; the v0.1.17
+delivery is the structural fix + reproducible smoke, not the proof of
+robustness against adversarial sources.
 
 ## Changes since v0.1.15
 
