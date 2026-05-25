@@ -1,0 +1,1574 @@
+[
+  {
+    "name": "mcp-server-git",
+    "ecosystem": "pypi",
+    "source": "pypi:mcp-server-git",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "git_status",
+      "git_diff_unstaged",
+      "git_diff_staged",
+      "git_diff",
+      "git_commit",
+      "git_add",
+      "git_reset",
+      "git_log",
+      "git_create_branch",
+      "git_checkout",
+      "git_show",
+      "git_branch"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "git_status",
+        "signals": []
+      },
+      {
+        "tool": "git_diff_unstaged",
+        "signals": []
+      },
+      {
+        "tool": "git_diff_staged",
+        "signals": []
+      },
+      {
+        "tool": "git_diff",
+        "signals": []
+      },
+      {
+        "tool": "git_commit",
+        "signals": []
+      },
+      {
+        "tool": "git_add",
+        "signals": []
+      },
+      {
+        "tool": "git_reset",
+        "signals": []
+      },
+      {
+        "tool": "git_log",
+        "signals": []
+      },
+      {
+        "tool": "git_create_branch",
+        "signals": []
+      },
+      {
+        "tool": "git_checkout",
+        "signals": []
+      },
+      {
+        "tool": "git_show",
+        "signals": []
+      },
+      {
+        "tool": "git_branch",
+        "signals": []
+      }
+    ],
+    "after_verdict": "shallow",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected (12) but MIS extracted ZERO behavior signals from any of them — not even PURE_COMPUTE. This means the analyzer recognized the tool names but failed to follow ANY of their implement",
+    "llm_extraction_notes": "Git operations wrapper, no network/secret access, local repo manipulation only",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 8.61,
+    "llm_input_tokens": 10780,
+    "llm_output_tokens": 591,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:33:53Z"
+  },
+  {
+    "name": "mcp-server-time",
+    "ecosystem": "pypi",
+    "source": "pypi:mcp-server-time",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "get_current_time",
+      "convert_time"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "get_current_time",
+        "signals": []
+      },
+      {
+        "tool": "convert_time",
+        "signals": []
+      }
+    ],
+    "after_verdict": "shallow",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected (2) but MIS extracted ZERO behavior signals from any of them — not even PURE_COMPUTE. This means the analyzer recognized the tool names but failed to follow ANY of their implementa",
+    "llm_extraction_notes": "Pure time/timezone conversion tools, no network or file system access",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 3.98,
+    "llm_input_tokens": 8887,
+    "llm_output_tokens": 137,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:34:57Z"
+  },
+  {
+    "name": "@modelcontextprotocol/server-filesystem",
+    "ecosystem": "npm",
+    "source": "npm:@modelcontextprotocol/server-filesystem",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "read_file",
+      "read_text_file",
+      "read_media_file",
+      "read_multiple_files",
+      "write_file",
+      "edit_file",
+      "create_directory",
+      "list_directory",
+      "list_directory_with_sizes",
+      "directory_tree",
+      "move_file",
+      "search_files",
+      "get_file_info",
+      "list_allowed_directories"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "read_file",
+        "signals": []
+      },
+      {
+        "tool": "read_text_file",
+        "signals": []
+      },
+      {
+        "tool": "read_media_file",
+        "signals": []
+      },
+      {
+        "tool": "read_multiple_files",
+        "signals": []
+      },
+      {
+        "tool": "write_file",
+        "signals": []
+      },
+      {
+        "tool": "edit_file",
+        "signals": []
+      },
+      {
+        "tool": "create_directory",
+        "signals": []
+      },
+      {
+        "tool": "list_directory",
+        "signals": []
+      },
+      {
+        "tool": "list_directory_with_sizes",
+        "signals": []
+      },
+      {
+        "tool": "directory_tree",
+        "signals": []
+      },
+      {
+        "tool": "move_file",
+        "signals": []
+      },
+      {
+        "tool": "search_files",
+        "signals": []
+      },
+      {
+        "tool": "get_file_info",
+        "signals": []
+      },
+      {
+        "tool": "list_allowed_directories",
+        "signals": []
+      }
+    ],
+    "after_verdict": "shallow",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected (14) but MIS extracted ZERO behavior signals from any of them — not even PURE_COMPUTE. This means the analyzer recognized the tool names but failed to follow ANY of their implement",
+    "llm_extraction_notes": "filesystem server with sandboxed directory access, no network or secret operations",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 23.79,
+    "llm_input_tokens": 14833,
+    "llm_output_tokens": 1350,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:36:44Z"
+  },
+  {
+    "name": "@modelcontextprotocol/server-memory",
+    "ecosystem": "npm",
+    "source": "npm:@modelcontextprotocol/server-memory",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "create_entities",
+      "create_relations",
+      "add_observations",
+      "delete_entities",
+      "delete_observations",
+      "delete_relations",
+      "read_graph",
+      "search_nodes",
+      "open_nodes"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "create_entities",
+        "signals": []
+      },
+      {
+        "tool": "create_relations",
+        "signals": []
+      },
+      {
+        "tool": "add_observations",
+        "signals": []
+      },
+      {
+        "tool": "delete_entities",
+        "signals": []
+      },
+      {
+        "tool": "delete_observations",
+        "signals": []
+      },
+      {
+        "tool": "delete_relations",
+        "signals": []
+      },
+      {
+        "tool": "read_graph",
+        "signals": []
+      },
+      {
+        "tool": "search_nodes",
+        "signals": []
+      },
+      {
+        "tool": "open_nodes",
+        "signals": []
+      }
+    ],
+    "after_verdict": "shallow",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected (9) but MIS extracted ZERO behavior signals from any of them — not even PURE_COMPUTE. This means the analyzer recognized the tool names but failed to follow ANY of their implementa",
+    "llm_extraction_notes": "Knowledge graph manager with local file persistence. All tools perform CRUD operations on local JSONL file.",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 5.69,
+    "llm_input_tokens": 5505,
+    "llm_output_tokens": 488,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:37:28Z"
+  },
+  {
+    "name": "@modelcontextprotocol/server-puppeteer",
+    "ecosystem": "npm",
+    "source": "npm:@modelcontextprotocol/server-puppeteer",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "puppeteer_navigate",
+      "puppeteer_screenshot",
+      "puppeteer_click",
+      "puppeteer_fill",
+      "puppeteer_select",
+      "puppeteer_hover",
+      "puppeteer_evaluate"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "puppeteer_navigate",
+        "signals": [
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "puppeteer_screenshot",
+        "signals": []
+      },
+      {
+        "tool": "puppeteer_click",
+        "signals": []
+      },
+      {
+        "tool": "puppeteer_fill",
+        "signals": []
+      },
+      {
+        "tool": "puppeteer_select",
+        "signals": []
+      },
+      {
+        "tool": "puppeteer_hover",
+        "signals": []
+      },
+      {
+        "tool": "puppeteer_evaluate",
+        "signals": [
+          "EXEC_DYNAMIC"
+        ]
+      }
+    ],
+    "after_verdict": "benign",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected and no intent-classifier rule fired. Be aware: a benign verdict is bounded by what the v0.1 ruleset covers (see LIMITATIONS.md L4); novel attack shapes may pass through.",
+    "llm_extraction_notes": "Puppeteer browser automation tools. Navigate uses input URL. Evaluate executes arbitrary JS via page.evaluate.",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 5.69,
+    "llm_input_tokens": 5400,
+    "llm_output_tokens": 413,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:38:00Z"
+  },
+  {
+    "name": "@modelcontextprotocol/server-postgres",
+    "ecosystem": "npm",
+    "source": "npm:@modelcontextprotocol/server-postgres",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "query"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "query",
+        "signals": []
+      }
+    ],
+    "after_verdict": "shallow",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected (1) but MIS extracted ZERO behavior signals from any of them — not even PURE_COMPUTE. This means the analyzer recognized the tool names but failed to follow ANY of their implementa",
+    "llm_extraction_notes": "PostgreSQL MCP server with read-only query tool; DB connection from CLI arg; no outbound net calls",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 2.9,
+    "llm_input_tokens": 2453,
+    "llm_output_tokens": 96,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:38:36Z"
+  },
+  {
+    "name": "@modelcontextprotocol/server-google-maps",
+    "ecosystem": "npm",
+    "source": "npm:@modelcontextprotocol/server-google-maps",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "maps_geocode",
+      "maps_reverse_geocode",
+      "maps_search_places",
+      "maps_place_details",
+      "maps_distance_matrix",
+      "maps_elevation",
+      "maps_directions"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "maps_geocode",
+        "signals": [
+          "SECRET_ENV_READ",
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT",
+          "SECRET_IN_REQUEST"
+        ]
+      },
+      {
+        "tool": "maps_reverse_geocode",
+        "signals": [
+          "SECRET_ENV_READ",
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT",
+          "SECRET_IN_REQUEST"
+        ]
+      },
+      {
+        "tool": "maps_search_places",
+        "signals": [
+          "SECRET_ENV_READ",
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT",
+          "SECRET_IN_REQUEST"
+        ]
+      },
+      {
+        "tool": "maps_place_details",
+        "signals": [
+          "SECRET_ENV_READ",
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT",
+          "SECRET_IN_REQUEST"
+        ]
+      },
+      {
+        "tool": "maps_distance_matrix",
+        "signals": [
+          "SECRET_ENV_READ",
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT",
+          "SECRET_IN_REQUEST"
+        ]
+      },
+      {
+        "tool": "maps_elevation",
+        "signals": [
+          "SECRET_ENV_READ",
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT",
+          "SECRET_IN_REQUEST"
+        ]
+      },
+      {
+        "tool": "maps_directions",
+        "signals": [
+          "SECRET_ENV_READ",
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT",
+          "SECRET_IN_REQUEST"
+        ]
+      }
+    ],
+    "after_verdict": "benign",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected and no intent-classifier rule fired. Be aware: a benign verdict is bounded by what the v0.1 ruleset covers (see LIMITATIONS.md L4); novel attack shapes may pass through.",
+    "llm_extraction_notes": "Google Maps API wrapper; reads GOOGLE_MAPS_API_KEY from env, sends to googleapis.com with user input",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 8.47,
+    "llm_input_tokens": 5534,
+    "llm_output_tokens": 757,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:39:13Z"
+  },
+  {
+    "name": "@modelcontextprotocol/server-brave-search",
+    "ecosystem": "npm",
+    "source": "npm:@modelcontextprotocol/server-brave-search",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "brave_web_search",
+      "brave_local_search"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "brave_web_search",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT",
+          "SECRET_ENV_READ",
+          "SECRET_IN_REQUEST"
+        ]
+      },
+      {
+        "tool": "brave_local_search",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT",
+          "SECRET_ENV_READ",
+          "SECRET_IN_REQUEST"
+        ]
+      }
+    ],
+    "after_verdict": "benign",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected and no intent-classifier rule fired. Be aware: a benign verdict is bounded by what the v0.1 ruleset covers (see LIMITATIONS.md L4); novel attack shapes may pass through.",
+    "llm_extraction_notes": "Both tools make HTTP requests to Brave API using env var BRAVE_API_KEY in headers; user query flows to URL params",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 5.81,
+    "llm_input_tokens": 4324,
+    "llm_output_tokens": 401,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:40:05Z"
+  },
+  {
+    "name": "@modelcontextprotocol/server-slack",
+    "ecosystem": "npm",
+    "source": "npm:@modelcontextprotocol/server-slack",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "slack_list_channels",
+      "slack_post_message",
+      "slack_reply_to_thread",
+      "slack_add_reaction",
+      "slack_get_channel_history",
+      "slack_get_thread_replies",
+      "slack_get_users",
+      "slack_get_user_profile"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "slack_list_channels",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "SECRET_ENV_READ"
+        ]
+      },
+      {
+        "tool": "slack_post_message",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "slack_reply_to_thread",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "slack_add_reaction",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "slack_get_channel_history",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "slack_get_thread_replies",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "slack_get_users",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "SECRET_ENV_READ"
+        ]
+      },
+      {
+        "tool": "slack_get_user_profile",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      }
+    ],
+    "after_verdict": "benign",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected and no intent-classifier rule fired. Be aware: a benign verdict is bounded by what the v0.1 ruleset covers (see LIMITATIONS.md L4); novel attack shapes may pass through.",
+    "llm_extraction_notes": "Slack API client; reads SLACK_BOT_TOKEN, SLACK_TEAM_ID, SLACK_CHANNEL_IDS from env; all tools make fetch calls to slack.",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 7.98,
+    "llm_input_tokens": 5282,
+    "llm_output_tokens": 755,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:40:35Z"
+  },
+  {
+    "name": "@modelcontextprotocol/server-aws-kb-retrieval",
+    "ecosystem": "npm",
+    "source": "npm:@modelcontextprotocol/server-aws-kb-retrieval",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "retrieve_from_aws_kb"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "retrieve_from_aws_kb",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_FROM_INPUT",
+          "SECRET_ENV_READ"
+        ]
+      }
+    ],
+    "after_verdict": "benign",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected and no intent-classifier rule fired. Be aware: a benign verdict is bounded by what the v0.1 ruleset covers (see LIMITATIONS.md L4); novel attack shapes may pass through.",
+    "llm_extraction_notes": "AWS SDK client reads credentials from env vars, makes API calls with user-supplied knowledgeBaseId",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 3.25,
+    "llm_input_tokens": 2757,
+    "llm_output_tokens": 144,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:41:18Z"
+  },
+  {
+    "name": "@modelcontextprotocol/server-gdrive",
+    "ecosystem": "npm",
+    "source": "npm:@modelcontextprotocol/server-gdrive",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "search"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "search",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_FROM_INPUT"
+        ]
+      }
+    ],
+    "after_verdict": "benign",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected and no intent-classifier rule fired. Be aware: a benign verdict is bounded by what the v0.1 ruleset covers (see LIMITATIONS.md L4); novel attack shapes may pass through.",
+    "llm_extraction_notes": "Google Drive API client; reads OAuth creds from FS; net calls use googleapis SDK with user input in query",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 4.03,
+    "llm_input_tokens": 3209,
+    "llm_output_tokens": 120,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:42:12Z"
+  },
+  {
+    "name": "@modelcontextprotocol/server-gitlab",
+    "ecosystem": "npm",
+    "source": "npm:@modelcontextprotocol/server-gitlab",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "create_or_update_file",
+      "search_repositories",
+      "create_repository",
+      "get_file_contents",
+      "push_files",
+      "create_issue",
+      "create_merge_request",
+      "fork_repository",
+      "create_branch"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "create_or_update_file",
+        "signals": [
+          "SECRET_ENV_READ",
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "search_repositories",
+        "signals": [
+          "SECRET_ENV_READ",
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "create_repository",
+        "signals": [
+          "SECRET_ENV_READ",
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "get_file_contents",
+        "signals": [
+          "SECRET_ENV_READ",
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "push_files",
+        "signals": [
+          "SECRET_ENV_READ",
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "create_issue",
+        "signals": [
+          "SECRET_ENV_READ",
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "create_merge_request",
+        "signals": [
+          "SECRET_ENV_READ",
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "fork_repository",
+        "signals": [
+          "SECRET_ENV_READ",
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "create_branch",
+        "signals": [
+          "SECRET_ENV_READ",
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      }
+    ],
+    "after_verdict": "benign",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected and no intent-classifier rule fired. Be aware: a benign verdict is bounded by what the v0.1 ruleset covers (see LIMITATIONS.md L4); novel attack shapes may pass through.",
+    "llm_extraction_notes": "GitLab API client. Reads GITLAB_PERSONAL_ACCESS_TOKEN from env, uses it in Authorization headers for all API calls.",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 9.74,
+    "llm_input_tokens": 8908,
+    "llm_output_tokens": 908,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:42:59Z"
+  },
+  {
+    "name": "@notionhq/notion-mcp-server",
+    "ecosystem": "npm",
+    "source": "npm:@notionhq/notion-mcp-server",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [],
+    "extracted_signals_per_tool": [],
+    "after_verdict": null,
+    "after_rule_hits": [],
+    "after_reason": "",
+    "llm_extraction_notes": "CLI entry point, no tool registrations found in this file",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 4.14,
+    "llm_input_tokens": 79650,
+    "llm_output_tokens": 38,
+    "moved": false,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:43:45Z"
+  },
+  {
+    "name": "@playwright/mcp",
+    "ecosystem": "npm",
+    "source": "npm:@playwright/mcp",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [],
+    "extracted_signals_per_tool": [],
+    "after_verdict": null,
+    "after_rule_hits": [],
+    "after_reason": "",
+    "llm_extraction_notes": "Entry points only; tool registration in playwright-core/lib/coreBundle (external dependency)",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 4.15,
+    "llm_input_tokens": 1985,
+    "llm_output_tokens": 45,
+    "moved": false,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:44:38Z"
+  },
+  {
+    "name": "@executeautomation/playwright-mcp-server",
+    "ecosystem": "npm",
+    "source": "npm:@executeautomation/playwright-mcp-server",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "start_codegen_session",
+      "end_codegen_session",
+      "get_codegen_session",
+      "clear_codegen_session",
+      "playwright_navigate",
+      "playwright_screenshot",
+      "playwright_click",
+      "playwright_iframe_click",
+      "playwright_iframe_fill",
+      "playwright_fill",
+      "playwright_select",
+      "playwright_hover",
+      "playwright_upload_file",
+      "playwright_evaluate",
+      "playwright_console_logs",
+      "playwright_resize",
+      "playwright_close",
+      "playwright_get",
+      "playwright_post",
+      "playwright_put",
+      "playwright_patch",
+      "playwright_delete",
+      "playwright_expect_response",
+      "playwright_assert_response",
+      "playwright_custom_user_agent",
+      "playwright_get_visible_text",
+      "playwright_get_visible_html",
+      "playwright_go_back",
+      "playwright_go_forward",
+      "playwright_drag",
+      "playwright_press_key",
+      "playwright_save_as_pdf",
+      "playwright_click_and_switch_tab"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "start_codegen_session",
+        "signals": []
+      },
+      {
+        "tool": "end_codegen_session",
+        "signals": []
+      },
+      {
+        "tool": "get_codegen_session",
+        "signals": []
+      },
+      {
+        "tool": "clear_codegen_session",
+        "signals": []
+      },
+      {
+        "tool": "playwright_navigate",
+        "signals": [
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "playwright_screenshot",
+        "signals": []
+      },
+      {
+        "tool": "playwright_click",
+        "signals": []
+      },
+      {
+        "tool": "playwright_iframe_click",
+        "signals": []
+      },
+      {
+        "tool": "playwright_iframe_fill",
+        "signals": []
+      },
+      {
+        "tool": "playwright_fill",
+        "signals": []
+      },
+      {
+        "tool": "playwright_select",
+        "signals": []
+      },
+      {
+        "tool": "playwright_hover",
+        "signals": []
+      },
+      {
+        "tool": "playwright_upload_file",
+        "signals": []
+      },
+      {
+        "tool": "playwright_evaluate",
+        "signals": [
+          "EXEC_DYNAMIC"
+        ]
+      },
+      {
+        "tool": "playwright_console_logs",
+        "signals": []
+      },
+      {
+        "tool": "playwright_resize",
+        "signals": []
+      },
+      {
+        "tool": "playwright_close",
+        "signals": []
+      },
+      {
+        "tool": "playwright_get",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "playwright_post",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "playwright_put",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "playwright_patch",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "playwright_delete",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "playwright_expect_response",
+        "signals": []
+      },
+      {
+        "tool": "playwright_assert_response",
+        "signals": []
+      },
+      {
+        "tool": "playwright_custom_user_agent",
+        "signals": []
+      },
+      {
+        "tool": "playwright_get_visible_text",
+        "signals": []
+      },
+      {
+        "tool": "playwright_get_visible_html",
+        "signals": []
+      },
+      {
+        "tool": "playwright_go_back",
+        "signals": []
+      },
+      {
+        "tool": "playwright_go_forward",
+        "signals": []
+      },
+      {
+        "tool": "playwright_drag",
+        "signals": []
+      },
+      {
+        "tool": "playwright_press_key",
+        "signals": []
+      },
+      {
+        "tool": "playwright_save_as_pdf",
+        "signals": []
+      },
+      {
+        "tool": "playwright_click_and_switch_tab",
+        "signals": []
+      }
+    ],
+    "after_verdict": "benign",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected and no intent-classifier rule fired. Be aware: a benign verdict is bounded by what the v0.1 ruleset covers (see LIMITATIONS.md L4); novel attack shapes may pass through.",
+    "llm_extraction_notes": "Playwright MCP server with browser automation and HTTP request tools. Source truncated at 120k chars.",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 42.82,
+    "llm_input_tokens": 31201,
+    "llm_output_tokens": 1819,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:45:31Z"
+  },
+  {
+    "name": "mcp-server-kubernetes",
+    "ecosystem": "npm",
+    "source": "npm:mcp-server-kubernetes",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "cleanup",
+      "kubectl_get",
+      "kubectl_describe",
+      "kubectl_apply",
+      "kubectl_delete",
+      "kubectl_create",
+      "kubectl_logs",
+      "kubectl_scale",
+      "kubectl_patch",
+      "kubectl_rollout",
+      "kubectl_context",
+      "kubectl_reconnect",
+      "explain_resource",
+      "install_helm_chart",
+      "upgrade_helm_chart",
+      "uninstall_helm_chart",
+      "node_management",
+      "port_forward",
+      "stop_port_forward",
+      "exec_in_pod",
+      "list_api_resources",
+      "kubectl_generic",
+      "ping"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "cleanup",
+        "signals": []
+      },
+      {
+        "tool": "kubectl_get",
+        "signals": [
+          "EXEC_SHELL"
+        ]
+      },
+      {
+        "tool": "kubectl_describe",
+        "signals": [
+          "EXEC_SHELL"
+        ]
+      },
+      {
+        "tool": "kubectl_apply",
+        "signals": [
+          "EXEC_SHELL"
+        ]
+      },
+      {
+        "tool": "kubectl_delete",
+        "signals": [
+          "EXEC_SHELL"
+        ]
+      },
+      {
+        "tool": "kubectl_create",
+        "signals": [
+          "EXEC_SHELL"
+        ]
+      },
+      {
+        "tool": "kubectl_logs",
+        "signals": [
+          "EXEC_SHELL"
+        ]
+      },
+      {
+        "tool": "kubectl_scale",
+        "signals": [
+          "EXEC_SHELL"
+        ]
+      },
+      {
+        "tool": "kubectl_patch",
+        "signals": [
+          "EXEC_SHELL"
+        ]
+      },
+      {
+        "tool": "kubectl_rollout",
+        "signals": [
+          "EXEC_SHELL"
+        ]
+      },
+      {
+        "tool": "kubectl_context",
+        "signals": [
+          "EXEC_SHELL"
+        ]
+      },
+      {
+        "tool": "kubectl_reconnect",
+        "signals": []
+      },
+      {
+        "tool": "explain_resource",
+        "signals": []
+      },
+      {
+        "tool": "install_helm_chart",
+        "signals": [
+          "EXEC_SHELL"
+        ]
+      },
+      {
+        "tool": "upgrade_helm_chart",
+        "signals": [
+          "EXEC_SHELL"
+        ]
+      },
+      {
+        "tool": "uninstall_helm_chart",
+        "signals": [
+          "EXEC_SHELL"
+        ]
+      },
+      {
+        "tool": "node_management",
+        "signals": []
+      },
+      {
+        "tool": "port_forward",
+        "signals": []
+      },
+      {
+        "tool": "stop_port_forward",
+        "signals": []
+      },
+      {
+        "tool": "exec_in_pod",
+        "signals": [
+          "EXEC_SHELL",
+          "EXEC_SHELL_WITH_INPUT"
+        ]
+      },
+      {
+        "tool": "list_api_resources",
+        "signals": []
+      },
+      {
+        "tool": "kubectl_generic",
+        "signals": [
+          "EXEC_SHELL",
+          "EXEC_SHELL_WITH_INPUT"
+        ]
+      },
+      {
+        "tool": "ping",
+        "signals": []
+      }
+    ],
+    "after_verdict": "benign",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected and no intent-classifier rule fired. Be aware: a benign verdict is bounded by what the v0.1 ruleset covers (see LIMITATIONS.md L4); novel attack shapes may pass through.",
+    "llm_extraction_notes": "Kubernetes MCP server with kubectl/helm wrappers; shell exec via execFileSync with user input",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 17.02,
+    "llm_input_tokens": 31298,
+    "llm_output_tokens": 1316,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:47:11Z"
+  },
+  {
+    "name": "mcp-server-commands",
+    "ecosystem": "npm",
+    "source": "npm:mcp-server-commands",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "run_process"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "run_process",
+        "signals": [
+          "EXEC_SHELL",
+          "EXEC_SHELL_WITH_INPUT"
+        ]
+      }
+    ],
+    "after_verdict": "benign",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected and no intent-classifier rule fired. Be aware: a benign verdict is bounded by what the v0.1 ruleset covers (see LIMITATIONS.md L4); novel attack shapes may pass through.",
+    "llm_extraction_notes": "Tool spawns child processes via node:child_process.spawn; shell mode and executable mode both present; stdin_text flows ",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 4.01,
+    "llm_input_tokens": 9136,
+    "llm_output_tokens": 130,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:48:15Z"
+  },
+  {
+    "name": "mcp-figma",
+    "ecosystem": "npm",
+    "source": "npm:mcp-figma",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "set_api_key",
+      "check_api_key",
+      "get_file",
+      "get_file_nodes",
+      "get_image",
+      "get_image_fills",
+      "get_comments",
+      "post_comment",
+      "delete_comment",
+      "get_team_projects",
+      "get_project_files",
+      "get_team_components",
+      "get_file_components",
+      "get_component",
+      "get_team_component_sets",
+      "get_team_styles",
+      "get_file_styles",
+      "get_style"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "set_api_key",
+        "signals": []
+      },
+      {
+        "tool": "check_api_key",
+        "signals": []
+      },
+      {
+        "tool": "get_file",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "get_file_nodes",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "get_image",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "get_image_fills",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "get_comments",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "post_comment",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "delete_comment",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "get_team_projects",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "get_project_files",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "get_team_components",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "get_file_components",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "get_component",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "get_team_component_sets",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "get_team_styles",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "get_file_styles",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "get_style",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      }
+    ],
+    "after_verdict": "benign",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected and no intent-classifier rule fired. Be aware: a benign verdict is bounded by what the v0.1 ruleset covers (see LIMITATIONS.md L4); novel attack shapes may pass through.",
+    "llm_extraction_notes": "Figma API client. All tools use axios to call api.figma.com with user-provided API key and input params.",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 20.78,
+    "llm_input_tokens": 10045,
+    "llm_output_tokens": 1487,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:49:07Z"
+  },
+  {
+    "name": "@browsermcp/mcp",
+    "ecosystem": "npm",
+    "source": "npm:@browsermcp/mcp",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "browser_press_key",
+      "browser_wait",
+      "browser_get_console_logs",
+      "browser_screenshot",
+      "browser_navigate",
+      "browser_go_back",
+      "browser_go_forward",
+      "browser_snapshot",
+      "browser_click",
+      "browser_hover",
+      "browser_type",
+      "browser_select_option"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "browser_press_key",
+        "signals": []
+      },
+      {
+        "tool": "browser_wait",
+        "signals": []
+      },
+      {
+        "tool": "browser_get_console_logs",
+        "signals": []
+      },
+      {
+        "tool": "browser_screenshot",
+        "signals": []
+      },
+      {
+        "tool": "browser_navigate",
+        "signals": []
+      },
+      {
+        "tool": "browser_go_back",
+        "signals": []
+      },
+      {
+        "tool": "browser_go_forward",
+        "signals": []
+      },
+      {
+        "tool": "browser_snapshot",
+        "signals": []
+      },
+      {
+        "tool": "browser_click",
+        "signals": []
+      },
+      {
+        "tool": "browser_hover",
+        "signals": []
+      },
+      {
+        "tool": "browser_type",
+        "signals": []
+      },
+      {
+        "tool": "browser_select_option",
+        "signals": []
+      }
+    ],
+    "after_verdict": "shallow",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected (12) but MIS extracted ZERO behavior signals from any of them — not even PURE_COMPUTE. This means the analyzer recognized the tool names but failed to follow ANY of their implement",
+    "llm_extraction_notes": "Browser automation MCP server; all operations delegated via WebSocket to browser extension",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 17.77,
+    "llm_input_tokens": 8038,
+    "llm_output_tokens": 612,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:50:26Z"
+  },
+  {
+    "name": "@21st-dev/magic",
+    "ecosystem": "npm",
+    "source": "npm:@21st-dev/magic",
+    "before_verdict": "unknown",
+    "before_rule_hits": [],
+    "before_tools": 0,
+    "extracted_tools": [
+      "21st_magic_component_builder",
+      "21st_magic_component_inspiration",
+      "logo_search",
+      "21st_magic_component_refiner"
+    ],
+    "extracted_signals_per_tool": [
+      {
+        "tool": "21st_magic_component_builder",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "21st_magic_component_inspiration",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "logo_search",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      },
+      {
+        "tool": "21st_magic_component_refiner",
+        "signals": [
+          "NET_HTTP_OUTBOUND",
+          "NET_HOST_LITERAL",
+          "NET_HOST_FROM_INPUT"
+        ]
+      }
+    ],
+    "after_verdict": "benign",
+    "after_rule_hits": [],
+    "after_reason": "Tools were detected and no intent-classifier rule fired. Be aware: a benign verdict is bounded by what the v0.1 ruleset covers (see LIMITATIONS.md L4); novel attack shapes may pass through.",
+    "llm_extraction_notes": "4 tools registered; all make HTTP calls to external APIs (21st.dev, svgl.app); no secret exfil detected",
+    "llm_parse_error": null,
+    "llm_api_error": null,
+    "llm_latency_s": 15.88,
+    "llm_input_tokens": 9148,
+    "llm_output_tokens": 816,
+    "moved": true,
+    "extraction_error": null,
+    "timestamp": "2026-05-25T10:51:22Z"
+  }
+]

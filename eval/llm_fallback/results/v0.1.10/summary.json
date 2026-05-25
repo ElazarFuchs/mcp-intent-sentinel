@@ -1,0 +1,16 @@
+{
+  "n": 20,
+  "moved": 18,
+  "moved_pct": 90.0,
+  "before_distribution": {
+    "unknown": 20
+  },
+  "after_distribution": {
+    "shallow": 6,
+    "benign": 12,
+    "unknown": 2
+  },
+  "total_input_tokens": 258373,
+  "total_output_tokens": 12423,
+  "errors": 0
+}

@@ -1,5 +1,17 @@
 # MCP Intent Sentinel
 
+> **v0.1.10 — L23 closure (the v0.1.9 pilot's r4 FPs).** Three changes
+> together close every malicious / suspicious FP the LLM-fallback pilot
+> surfaced on real packages: `_guess_intent` now routes API-client and
+> maps/geocode keywords (`slack`, `gitlab`, `notion`, `figma`, `aws`,
+> `google`, `geocode`, `coordinates`, `api`, `sdk`, ...) into `fetch`
+> intent BEFORE the format/convert check that mislabeled them;
+> `r4.intent_mismatch`'s SECRET_FS_READ catch-all is now role-aware (skips
+> when declared_intent ∈ {file, shell, fetch}); the LLM-fallback prompt
+> got NEGATIVE examples for SECRET_FS_READ. Regression fixture
+> `legit_file_role_reads_ssh_config`. 80/80 tests (was 79). L23 closed
+> in part — host-vs-intent matching for r1 remains roadmap.
+
 > **v0.1.9 — LLM fallback pilot (L13).** Sends `unknown`-verdicted source
 > to a frontier LLM with a hardened extraction-only prompt; the LLM returns
 > tool registrations + behavior signals in a closed-enum JSON schema; the
@@ -209,7 +221,7 @@ The list is long and labeled. Headlines:
 - **L13 — Tool registration coverage is partial.** 20 servers (60.6% of the
   v0.1.7 scanned set) are `unknown` because their SDK pattern isn't covered.
 
-Read [LIMITATIONS.md](./LIMITATIONS.md) for L1..L23 in full.
+Read [LIMITATIONS.md](./LIMITATIONS.md) for L1..L24 in full.
 
 ## Layout
 
@@ -234,7 +246,7 @@ eval/
 ├── run.py              # harness
 └── results/{v0.1.3,v0.1.4,v0.1.5}/{report.md,run.json}
 
-tests/                  # 79 unit + integration tests, 21 fixtures
+tests/                  # 80 unit + integration tests, 22 fixtures
 ```
 
 ## Relationship to neighbor projects
@@ -244,7 +256,7 @@ tests/                  # 79 unit + integration tests, 21 fixtures
 | `mcp-trust` | Sigstore-style trust + runtime proxy | v0.1-alpha |
 | `arsp` | Runtime security plane: capability tokens, IFC, output sealing | research |
 | `agent-config-injection` | Workspace config-file injection scanner (`.cursorrules`, `mcp.json`) | v0.1.8 |
-| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.9 |
+| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.10 |
 
 The composition story: `agent-config-injection` scans config files in a
 workspace, `mcp-intent-sentinel` scans the server source before install,

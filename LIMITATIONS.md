@@ -1,4 +1,80 @@
-# LIMITATIONS — v0.1.9
+# LIMITATIONS — v0.1.10
+
+## Changes since v0.1.9
+
+v0.1.10 closes the L23 FPs the v0.1.9 LLM-fallback pilot surfaced —
+`mcp-server-filesystem`, `mcp-figma`, `server-google-maps`, and the three
+suspicious-overcalls (slack, playwright, 21st-dev/magic) — by making
+`r4.intent_mismatch` role-aware (analogous to the v0.1.7 r6 treatment for
+kubectl-runners). Two parallel changes:
+
+**`_guess_intent` widened.** New "fetch" matchers fire BEFORE the
+"format/convert" check so that tools whose descriptions use generic verbs
+like "Convert an address to coordinates" (Google Maps geocode), "Lookup",
+"Search" etc. still land in `fetch` (the correct intent for an API
+client). New keyword sets:
+
+- API/SDK names: `slack`, `gitlab`, `github`, `notion`, `figma`, `jira`,
+  `confluence`, `trello`, `asana`, `linear`, `aws`, `azure`, `gcp`,
+  `googleapis`, `openai`, `anthropic`, `stripe`, `twilio`, `webhook`,
+  `api`, `rest`, `sdk`, `client`, `endpoint`, `oauth`.
+- Maps / geo: `geocode`, `coordinates`, `geolocation`, `directions`,
+  `elevation`, `places`, `maps`, `address`, `latitude`, `longitude`,
+  `distance`.
+
+These categories are checked before generic verbs to avoid the
+v0.1.9-era miscategorization that put `maps_geocode` in `format`.
+
+**r4 SECRET_FS_READ catch-all is role-aware.** The catch-all
+("any tool reads ~/.ssh / .aws without declaring itself a credential
+helper") now SKIPS when `declared_intent` is in `{file, shell, fetch}` —
+the three roles that legitimately touch the filesystem. File servers
+read files. Devops servers read kubeconfigs. API clients sometimes
+read their own auth file. The catch-all still fires on math / format /
+search / db / email / unknown-intent tools (the ones with no business
+touching sensitive paths). Self-declared credential helpers continue
+to be exempted via the `credential|key|token|auth|secret` description
+keyword check.
+
+**Trade-off (intentional):** a hostile fetch-intent tool that reads
+SSH but does NOT exfil via network slips through r4 now. The stronger
+rule `r1.secret_to_request` still catches it when the SSH content
+reaches an outbound call — that's the actual exfil signal, and it's
+the right place to draw the line. Pre-v0.1.10 r4 was over-flagging
+legitimate file/API servers, which is the adoption-blocking error.
+
+**LLM-fallback prompt tightened.** The SECRET_FS_READ definition in
+`eval/llm_fallback/analyzer.py:SYSTEM_PROMPT` now carries NEGATIVE
+examples ("does NOT qualify: user-supplied path, the package's own
+non-credential config, the package's own `~/.mcp-pkg/config.json`"),
+to push the LLM away from over-emission on legit file/API tools.
+
+**New regression fixture:**
+`tests/corpus/benign/legit_file_role_reads_ssh_config` — a file-role
+tool that reads `~/.ssh/config`. Pre-v0.1.10 r4's catch-all would
+flag suspicious; v0.1.10 the role exemption skips it. (Tests 79→80.)
+
+**L23 reclassified — closed in part, open in part.** The pilot-surfaced
+FPs are closed. The deeper "host-vs-intent matching" piece — knowing
+that a Bearer-header to `api.openai.com` from an OpenAI client is
+benign while to `attacker.example` is exfil — remains roadmap. The
+static path doesn't fire r1 spuriously on legit clients (it requires a
+real `py.exfil.secret_in_request` finding, which itself requires the
+secret-bearing data to reach the call args), but the LLM-fallback path
+could over-emit `SECRET_IN_REQUEST` and trip r1 on a benign API
+client. Mitigation: the v0.1.9 pilot showed the LLM is in practice
+conservative on `SECRET_IN_REQUEST` (it didn't emit it on
+brave-search, gitlab, aws-kb-retrieval, gdrive — all of which read
+env tokens and send them to APIs); but a multi-model agreement check
+would close this fully.
+
+**L24 (new) — `_reads_sensitive_path` is only checked in `visit_Assign`.**
+A tool that does `return Path("~/.ssh/id_rsa").read_text()` directly,
+without binding to a variable first, escapes detection. The fixture
+`legit_file_role_reads_ssh_config` works around this by binding to
+`contents` before returning. Tracked as part of the L18 dispatch
+coverage; the fix is small (also check inside `visit_Call` / `visit_Return`)
+but the existing corpus shapes don't hit it.
 
 ## Changes since v0.1.8
 

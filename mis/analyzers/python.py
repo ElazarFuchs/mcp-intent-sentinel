@@ -165,6 +165,21 @@ def _guess_intent(description: str, name: str) -> str:
     Returns one of: math, fetch, file, shell, email, search, db, format, unknown.
     """
     text = f"{name} {description}".lower()
+    # API-client keywords FIRST — the v0.1.9 LLM-fallback pilot found that
+    # `slack_add_reaction`'s "add" was matching the math regex below before
+    # "slack" had a chance. Note we use `(?<![A-Za-z0-9])...(?![A-Za-z0-9])`
+    # rather than `\b` because `\b` treats `_` as a word character, so
+    # `\bslack\b` does NOT match inside `slack_add_reaction`. The custom
+    # boundary allows `_` as a separator while still excluding `slackbot`
+    # (`t` after `slack`) from matching.
+    if re.search(
+        r"(?<![A-Za-z0-9])(slack|gitlab|github|notion|figma|jira|confluence|"
+        r"trello|asana|linear|aws|azure|gcp|googleapis|openai|anthropic|"
+        r"stripe|twilio|webhook|api|rest|sdk|client|endpoint|oauth)"
+        r"(?![A-Za-z0-9])",
+        text,
+    ):
+        return "fetch"
     if re.search(r"\b(add|subtract|multiply|divide|sum|average|calculat|arithmetic|math)\b", text):
         return "math"
     # Devops/shell keywords FIRST — these signal the tool's underlying
@@ -180,6 +195,16 @@ def _guess_intent(description: str, name: str) -> str:
         text,
     ):
         return "shell"
+    # Geographic / maps APIs — same reasoning as the API-client block above
+    # (descriptions use verbs like "convert", "lookup", "search" that hit
+    # format/search first if maps keywords don't get priority).
+    # "convert", "lookup", "search" that otherwise hit format/search first).
+    if re.search(
+        r"\b(geocode|coordinates|geolocation|directions|elevation|places|"
+        r"maps?|address|latitude|longitude|distance)\b",
+        text,
+    ):
+        return "fetch"
     if re.search(r"\b(fetch|get|download|http|request|url|webpage|scrape)\b", text):
         return "fetch"
     if re.search(r"\b(read|write|file|path|directory|list files?|glob)\b", text):

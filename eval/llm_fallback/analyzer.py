@@ -102,8 +102,21 @@ the classifier. If the tool body shows none of these, return an empty list.
   input parameters (legit fetcher pattern).
 - NET_ON_IMPORT: a net call appears at module top scope (fires at import).
 - SECRET_ENV_READ: tool body reads os.environ / process.env / os.getenv.
-- SECRET_FS_READ: tool body reads ~/.ssh, ~/.aws, browser keychain, or
-  similar sensitive filesystem paths.
+- SECRET_FS_READ: ONLY emit when the tool body reads a HARDCODED path to
+  a credential / cookie / token store. Specifically:
+    QUALIFIES:  `open("/Users/x/.ssh/id_rsa")`, `Path.home() / ".aws" /
+                "credentials"`, browser cookie DB paths (`Cookies.sqlite`,
+                `Login Data`), `~/.config/git/credentials`, system keychains.
+    DOES NOT QUALIFY: `open(user_supplied_path)` (the tool's normal
+                operation); `open("./config.json")` for the package's own
+                non-credential config; reading the package's own
+                `~/.mcp-<pkgname>/config.json` (its OWN config, even if it
+                stores an API key — that's the package's data, not a
+                credential STORE); reading the tool's runtime input.
+    A tool whose declared purpose is "read files" / "list directory" /
+    "load configuration" is doing file ops by design — that is NEVER
+    SECRET_FS_READ unless the specific paths it touches are credential
+    stores.
 - SECRET_IN_REQUEST: env-var or sensitive-file content flows into the
   arguments of a net call (this is the hard exfil signal).
 - RETURNS_SECRET: a helper function returns a value derived from a secret

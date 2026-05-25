@@ -80,6 +80,12 @@ BENIGN_FIXTURES = [
     # @modelcontextprotocol/server-gitlab FP. v0.1.7 dropped the bare-word
     # regex; actual fetch calls are detected via `\bfetch\s*\(`.
     "legit_node_fetch_import",
+    # legit_file_role_reads_ssh_config: a file-reading tool that legitimately
+    # touches ~/.ssh/config. Pre-v0.1.10 r4's SECRET_FS_READ catch-all flagged
+    # it suspicious. v0.1.10 added role-aware exemption (declared_intent in
+    # {file, shell, fetch} skips the catch-all) after the LLM-fallback pilot
+    # surfaced this FP on server-filesystem / mcp-figma / playwright_upload.
+    "legit_file_role_reads_ssh_config",
 ]
 
 # v0.1.2: shallow-verdict fixtures. These are LEGITIMATE servers whose

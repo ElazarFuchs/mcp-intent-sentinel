@@ -124,6 +124,10 @@ def _r3_lifecycle_dropper(findings: list[Finding], _tools) -> Optional[RuleHit]:
     )
 
 
+_R4_FS_ROLE_EXEMPT = {"file", "shell", "fetch"}
+_R4_CREDENTIAL_DESC_KEYWORDS = ("credential", "key", "token", "auth", "secret")
+
+
 def _r4_intent_mismatch(_findings, tools: list[ToolProfile]) -> Optional[RuleHit]:
     """Tool's declared intent does not match its observed behavior.
 
@@ -132,16 +136,32 @@ def _r4_intent_mismatch(_findings, tools: list[ToolProfile]) -> Optional[RuleHit
 
     This is the rule that *most distinguishes the product* from pattern
     matchers: it compares declared purpose to actual capability.
+
+    v0.1.10 — role-aware exemption on the SECRET_FS_READ catch-all. The
+    LLM-fallback pilot (v0.1.9) emitted SECRET_FS_READ on every file-
+    reading tool of server-filesystem, mcp-figma, etc. — packages whose
+    declared purpose IS to read files / call APIs that need a key from a
+    file. The catch-all was too broad; it now skips tools whose declared
+    intent is `file` / `shell` / `fetch` (legitimate file/devops/API
+    consumers) or whose description explicitly self-identifies as a
+    credential helper (key/token/auth/secret/credential).
+
+    The trade-off (L23): a hostile fetch-intent tool that reads SSH but
+    doesn't exfil will now pass — caught instead by r1 (secret-to-request)
+    when the SSH content reaches a network call. The previous behavior
+    over-flagged legitimate file/API servers, which is the worse error in
+    practice (adoption-blocking).
     """
     mismatches: list[tuple[ToolProfile, str]] = []
     for tool in tools:
         intent = tool.declared_intent
         beh = tool.behavior
+        desc_low = tool.declared_description.lower()
 
-        # Math/format/search tools should NOT do network egress
+        # Math/format tools should NOT do network egress
         if intent in {"math", "format"} and BehaviorSignal.NET_HTTP_OUTBOUND in beh:
             mismatches.append((tool, f"declared as '{intent}' but issues outbound HTTP"))
-        # Math/format/search tools should NOT shell out
+        # Math/format tools should NOT shell out
         if intent in {"math", "format"} and BehaviorSignal.EXEC_SHELL in beh:
             mismatches.append((tool, f"declared as '{intent}' but spawns a shell process"))
         # Math tools should NOT read filesystem at all
@@ -150,11 +170,20 @@ def _r4_intent_mismatch(_findings, tools: list[ToolProfile]) -> Optional[RuleHit
         # Search tools should not read credentials
         if intent == "search" and BehaviorSignal.SECRET_FS_READ in beh:
             mismatches.append((tool, "declared as 'search' but reads sensitive filesystem paths"))
-        # ANY tool reading ~/.ssh / .aws etc is a strong intent mismatch unless declared as a credential helper
-        if BehaviorSignal.SECRET_FS_READ in beh and "credential" not in tool.declared_description.lower():
-            # avoid double-counting math/search cases above
-            if not any(t is tool for t, _ in mismatches):
-                mismatches.append((tool, "reads ~/.ssh / .aws / cookie store without declaring itself a credential tool"))
+
+        # SECRET_FS_READ catch-all — v0.1.10 role-aware. Skip when:
+        #   (a) declared_intent is file/shell/fetch — those legitimately
+        #       touch the filesystem (FS server, kubectl helper, API client
+        #       reading its own auth file); OR
+        #   (b) declared_description names itself as a credential / key /
+        #       token / auth / secret helper (explicit self-declaration).
+        if BehaviorSignal.SECRET_FS_READ in beh:
+            credential_helper = any(k in desc_low for k in _R4_CREDENTIAL_DESC_KEYWORDS)
+            role_expected = intent in _R4_FS_ROLE_EXEMPT
+            if not credential_helper and not role_expected:
+                # avoid double-counting math/search cases above
+                if not any(t is tool for t, _ in mismatches):
+                    mismatches.append((tool, "reads ~/.ssh / .aws / cookie store without declaring itself a credential tool"))
 
     if not mismatches:
         return None
