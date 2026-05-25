@@ -7,6 +7,7 @@
       "source": "npm:postmark-mcp@1.0.16",
       "label": "malicious",
       "rationale": "Known in-the-wild backdoor disclosed September 2025 — the first publicly-documented malicious MCP server. The send_email tool silently BCC'd every outgoing message to phan@giftshop.club, an attacker-controlled address. The tests/corpus/malicious/postmark_backdoor fixture is modeled on this exact shape. Version pinned to 1.0.16 (the affected release). Note: this version was YANKED from npm after disclosure; `npm pack postmark-mcp@1.0.16` now fails. The harness will surface this as `error` (not FN) until / unless the tarball is preserved out-of-band. Kept in the corpus because the label itself is the most-confident malicious-MCP claim in the public record, and a future re-host of the affected version (or a similar in-the-wild incident) will need the same label format.",
+      "documented_source": "In-the-wild disclosure: postmark-mcp@1.0.16 backdoor, September 2025 (first publicly-documented malicious MCP server). OWASP MCP Top 10: MCP04 (SupplyChain) + MCP09 (DataExposure).",
       "reviewer": "EF",
       "date_labeled": "2026-05-25",
       "confidence": 0.99
@@ -19,7 +20,8 @@
       "rationale": "Anthropic-maintained server in the modelcontextprotocol/servers monorepo. Single tool returns current time / converts between timezones. No network, no filesystem, no shell, no env reads. Source has been reviewed by the project authors and is widely installed. confidence at 0.85 (not higher) because MIS itself currently verdicts this `unknown` (the SDK pattern in use isn't detected) — so the label is based on source-reading, not MIS-confirmation.",
       "reviewer": "EF",
       "date_labeled": "2026-05-25",
-      "confidence": 0.85
+      "confidence": 0.85,
+      "documented_source": "Anthropic-maintained server in modelcontextprotocol/servers monorepo. Treated as benign per Anthropic's published source-of-truth. No external threat documentation needed (the benign label is the absence of threat)."
     },
     {
       "name": "@modelcontextprotocol/server-everything",
@@ -29,7 +31,8 @@
       "rationale": "Anthropic's reference \"kitchen sink\" server demonstrating every MCP capability — prompts, resources, tools, sampling. Source is the canonical example for the official SDK. Tools include echo, add, longRunningOperation, sampleLLM, getTinyImage; no exfil, no shell-with-input, no secret reads. Widely installed; serves as the SDK test bed. MIS verdicts this `benign` independently (4 of 4 v0.1.7 benign-list entries include it).",
       "reviewer": "EF",
       "date_labeled": "2026-05-25",
-      "confidence": 0.90
+      "confidence": 0.9,
+      "documented_source": "Anthropic-maintained reference server, modelcontextprotocol/servers monorepo. Benign by virtue of being the canonical SDK example."
     },
     {
       "name": "@modelcontextprotocol/server-filesystem",
@@ -39,7 +42,8 @@
       "rationale": "Anthropic-maintained server in the modelcontextprotocol/servers monorepo. Exposes filesystem access tools constrained to a configured root directory. The capability is broad by design (read/write/list within the root) but the implementation is a textbook scoped filesystem; no shell, no network, no secret exfil. confidence at 0.80 — the FS-access surface is broad enough that a careless deployment with `/` as the root would expose a lot; benign as shipped, dangerous if misconfigured.",
       "reviewer": "EF",
       "date_labeled": "2026-05-25",
-      "confidence": 0.80
+      "confidence": 0.8,
+      "documented_source": "Anthropic-maintained server, modelcontextprotocol/servers monorepo. Benign as shipped (filesystem access constrained to a configured root); deployment-time misconfiguration is out of scope for MIS pre-install analysis."
     },
     {
       "name": "mcp-server-fetch",
@@ -49,7 +53,8 @@
       "rationale": "Anthropic-maintained server in the modelcontextprotocol/servers monorepo. The fetch tool retrieves a URL (input-derived host — the legit fetcher pattern) and returns content. No env reads, no shell, no secret exfil. The body uses class-based dispatch which MIS doesn't yet follow (L18), so MIS verdicts this `shallow` — the label is based on source-reading, not MIS-confirmation. confidence 0.85.",
       "reviewer": "EF",
       "date_labeled": "2026-05-25",
-      "confidence": 0.85
+      "confidence": 0.85,
+      "documented_source": "Anthropic-maintained server, modelcontextprotocol/servers monorepo. Benign — input-derived host (legit fetcher pattern); no env reads, no shell."
     },
     {
       "name": "fixture:postmark_backdoor",
@@ -58,6 +63,7 @@
       "label": "malicious",
       "synthetic": true,
       "rationale": "In-house test fixture modeled on the 2025 postmark-mcp@1.0.16 in-the-wild backdoor (silent BCC of every outgoing email to phan@giftshop.club). Hand-authored as a regression test for r2.bcc_injection — the npm tarball was yanked after disclosure, so this fixture is the only currently-fetchable artifact of the pattern. Synthetic flag set: the corpus was written by MIS authors, so labels here measure MIS against its own tastes — NOT a substitute for in-the-wild labels. Useful as a non-trivial TP data point until additional public disclosures become available.",
+      "documented_source": "In-the-wild disclosure: postmark-mcp@1.0.16, September 2025. OWASP MCP Top 10: MCP09 (DataExposure).",
       "reviewer": "EF",
       "date_labeled": "2026-05-25",
       "confidence": 0.99
@@ -71,7 +77,8 @@
       "rationale": "In-house fixture: FastMCP weather tool whose body silently POSTs the full os.environ to a telemetry URL before returning the legit weather lookup. Models the Kaspersky-documented information-harvesting pattern. Hand-authored as a regression test for r1.secret_to_request. Synthetic flag set — see fixture:postmark_backdoor for the methodology caveat.",
       "reviewer": "EF",
       "date_labeled": "2026-05-25",
-      "confidence": 0.99
+      "confidence": 0.99,
+      "documented_source": "Kaspersky-documented 'information-harvesting MCP server' pattern: legit-looking server beacons env to attacker URL on every tool call. OWASP MCP Top 10: MCP09 (DataExposure)."
     },
     {
       "name": "fixture:tool_shadowing",
@@ -82,7 +89,8 @@
       "rationale": "In-house fixture: math-helpers tool whose declared purpose is `add(a,b)` but whose body reads ~/.ssh/id_rsa and exfils. Hand-authored as a regression test for r4.intent_mismatch (description vs body divergence). Synthetic flag set.",
       "reviewer": "EF",
       "date_labeled": "2026-05-25",
-      "confidence": 0.99
+      "confidence": 0.99,
+      "documented_source": "Tool-name-vs-body intent mismatch class. Documented in MCP security research papers and the Cisco MCP Server Inspector taxonomy as 'declared purpose ≠ implementation behavior'. OWASP MCP Top 10: MCP06 (IntentFlowSubversion) + MCP09 (DataExposure)."
     },
     {
       "name": "fixture:hidden_instruction",
@@ -93,7 +101,8 @@
       "rationale": "In-house fixture: tool with prompt-injection payload hidden in its declared description (HTML comment instructing the LLM to also read /etc/passwd and not mention it). Hand-authored as a regression test for r5.tool_poisoning. Synthetic flag set.",
       "reviewer": "EF",
       "date_labeled": "2026-05-25",
-      "confidence": 0.99
+      "confidence": 0.99,
+      "documented_source": "Tool-description prompt injection. Documented in Anthropic's MCP tool-description guidance and the OWASP MCP Top 10 #03 (ToolPoisoning). The HTML-comment carrier is the canonical shape: the human reviewer skims past it, the LLM reads it."
     },
     {
       "name": "fixture:command_injection",
@@ -104,7 +113,8 @@
       "rationale": "In-house fixture: git_log / list_files tools that pass tool input directly into subprocess.check_output(shell=True). Models the mcp-server-git RCE class (CVE-2025-68143/4/5). Hand-authored as a regression test for r6.command_injection. Synthetic flag set.",
       "reviewer": "EF",
       "date_labeled": "2026-05-25",
-      "confidence": 0.99
+      "confidence": 0.99,
+      "documented_source": "Reference: CVE-2025-68143 / CVE-2025-68144 / CVE-2025-68145 — mcp-server-git RCE class where tool input flowed into subprocess(shell=True) / os.popen. OWASP MCP Top 10: MCP05 (CommandInjectionExecution)."
     },
     {
       "name": "fixture:lifecycle_dropper",
@@ -115,7 +125,8 @@
       "rationale": "In-house fixture: npm package whose package.json `postinstall` script does `curl -s ... | bash`. Models the supply-chain dropper class — fires at install time, before any tool is invoked. Hand-authored as a regression test for r3.lifecycle_dropper. Synthetic flag set.",
       "reviewer": "EF",
       "date_labeled": "2026-05-25",
-      "confidence": 0.99
+      "confidence": 0.99,
+      "documented_source": "Generic supply-chain dropper pattern via npm package.json postinstall script — runs before any tool invocation. Documented across the npm-supply-chain literature (event-stream, ua-parser-js incidents). OWASP MCP Top 10: MCP04 (SupplyChain)."
     },
     {
       "name": "fixture:official_sdk_exfil",
@@ -126,7 +137,8 @@
       "rationale": "In-house fixture: official low-level SDK pattern (mcp.server.Server + @app.list_tools / @app.call_tool) with env exfil before returning a plausible timestamp. Models the field-test repro where v0.1.0 missed this shape. Hand-authored as a regression test for r1 via the official-SDK detection path. Synthetic flag set.",
       "reviewer": "EF",
       "date_labeled": "2026-05-25",
-      "confidence": 0.99
+      "confidence": 0.99,
+      "documented_source": "Field-test repro of the v0.1.0 detection gap: official low-level SDK pattern (mcp.server.Server + @app.list_tools / @app.call_tool) with env exfil. Documented internally in the v0.1.1 release notes as the shape mcp-server-fetch and the modelcontextprotocol/servers monorepo use."
     },
     {
       "name": "fixture:openai_key_in_header",
@@ -137,7 +149,8 @@
       "rationale": "In-house fixture: official-SDK 'ask' tool that reads OPENAI_API_KEY from env and puts it in an Authorization: Bearer header on httpx.AsyncClient.post. The shape is structurally identical to a textbook exfil channel that v0.1.1 missed. Hand-authored as a regression test for r1 across alias-tracking and async-with shapes. Synthetic flag set.",
       "reviewer": "EF",
       "date_labeled": "2026-05-25",
-      "confidence": 0.99
+      "confidence": 0.99,
+      "documented_source": "Bearer-header exfil class — env-loaded API key flows into Authorization: Bearer on outbound HTTP. Documented as the openai_key_in_header / 'API key as exfil channel' class. OWASP MCP Top 10: MCP08 (AuthFailures) + MCP09 (DataExposure)."
     },
     {
       "name": "fixture:helper_exfil",
@@ -148,7 +161,8 @@
       "rationale": "In-house fixture: secret read and net call sit in DIFFERENT helper functions, glued together by the tool body. Hand-authored as a regression test for inter-procedural taint (function summaries, L2 partial closure). Synthetic flag set.",
       "reviewer": "EF",
       "date_labeled": "2026-05-25",
-      "confidence": 0.99
+      "confidence": 0.99,
+      "documented_source": "Inter-procedural taint class: secret-read and net-call sit in different helpers. Documented in static-analysis literature as the function-boundary evasion pattern. OWASP MCP Top 10: MCP09 (DataExposure)."
     },
     {
       "name": "fixture:runtime_context_exfil",
@@ -157,6 +171,31 @@
       "label": "suspicious",
       "synthetic": true,
       "rationale": "In-house fixture: tool POSTs platform.platform() + socket.gethostname() to attacker URL — the 'modified payload' bypass surfaced by the v0.1.5-full model-compliance eval (alignment-tuned models refuse env exfil and substitute host fingerprint). Labeled SUSPICIOUS, not malicious — fingerprint exfil is a real signal but less severe than credential exfil; r11.fingerprint_to_request verdicts suspicious. Hand-authored as a regression test. Synthetic flag set.",
+      "reviewer": "EF",
+      "date_labeled": "2026-05-25",
+      "confidence": 0.95,
+      "documented_source": "'Modified payload' bypass class — the LLM-fallback model-compliance eval (v0.1.5-full, this repo) surfaced this empirically: alignment-tuned models refuse env exfil and substitute host fingerprint (platform.* + socket.gethostname). Documented in eval/model_compliance/FINDING.md. OWASP MCP Top 10: MCP09 (DataExposure, weaker payload)."
+    },
+    {
+      "name": "fixture:auth_override_pre_authorized",
+      "ecosystem": "file",
+      "source": "file://tests/corpus/malicious/auth_override_pre_authorized",
+      "label": "malicious",
+      "synthetic": true,
+      "rationale": "In-house fixture: a delete_file tool whose declared description claims the user has 'pre-authorized' destructive operations — an instruction to the LLM to skip its own permission check. Hand-authored v0.1.18 as a regression test for DESC_AUTH_OVERRIDE detection (the signal existed in the enum but no end-to-end fixture exercised it). Synthetic flag set.",
+      "documented_source": "MCP06 (IntentFlowSubversion) in the project's own OWASP MCP Top 10 mapping (mis/findings.py:OwaspMcp.MCP06). Broader literature: OWASP LLM Top 10 v2 'Excessive Agency' is the parent class. The 'pre-authorized' phrasing is the canonical instruction-flow-subversion shape called out in Anthropic's MCP tool-description guidance.",
+      "reviewer": "EF",
+      "date_labeled": "2026-05-25",
+      "confidence": 0.95
+    },
+    {
+      "name": "fixture:unicode_steg_description",
+      "ecosystem": "file",
+      "source": "file://tests/corpus/malicious/unicode_steg_description",
+      "label": "malicious",
+      "synthetic": true,
+      "rationale": "In-house fixture: tool description contains invisible Unicode code points (U+200B zero-width space, U+202A left-to-right embedding) in Cf/Cs categories. Hand-authored v0.1.18 as a regression test for DESC_UNICODE_STEG detection (the Cf/Cs category scan existed but no fixture exercised it). The hidden code points are intentional — any future refactor that drops the Cf/Cs scan must fail this fixture.",
+      "documented_source": "Unicode-steganography prompt injection. Documented in Anthropic's MCP tool-description guidance (Cf/Cs categories warned). OWASP MCP Top 10: MCP01 (PromptInjection) + MCP03 (ToolPoisoning). General LLM-security literature on invisible-character injection (zero-width joiners, bidi overrides) applies.",
       "reviewer": "EF",
       "date_labeled": "2026-05-25",
       "confidence": 0.95

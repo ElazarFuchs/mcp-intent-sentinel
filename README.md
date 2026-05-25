@@ -1,5 +1,20 @@
 # MCP Intent Sentinel
 
+> **v0.1.18 — documented_source field + literature-based fixtures
+> (L20 partial closure).** Every label in `eval/labeled/labels.json` now
+> carries an explicit `documented_source` string citing the external
+> research / disclosure / OWASP MCP Top 10 category that grounds the
+> fixture. Two new fixtures from previously-uncovered detection paths:
+> `auth_override_pre_authorized` (MCP06 IntentFlowSubversion — tool
+> description claims user pre-authorized destructive actions) and
+> `unicode_steg_description` (MCP01/03 — zero-width Cf code points in
+> tool description). Both signals had detection wiring without end-to-end
+> coverage pre-v0.1.18. Tests 82→84. The corpus is still synthetic-
+> dominant (no in-the-wild MCP captures yet exist in the public record
+> beyond postmark@1.0.16, which is unfetchable) — full L20 closure
+> requires in-the-wild labels the ecosystem doesn't have. `documented_source`
+> is the forward-compatible infrastructure to absorb those when they appear.
+
 > **v0.1.17 — multi-model UNION extraction for LLM-fallback (L22 silent-
 > omission defense).** New `analyze_with_union(primary, secondary)` in
 > `eval/llm_fallback/analyzer.py` runs the LLM extractor twice on
@@ -330,7 +345,7 @@ eval/
 ├── run.py              # harness
 └── results/{v0.1.3,v0.1.4,v0.1.5}/{report.md,run.json}
 
-tests/                  # 82 unit + integration tests, 24 fixtures
+tests/                  # 84 unit + integration tests, 26 fixtures
 ```
 
 ## Relationship to neighbor projects
@@ -340,7 +355,7 @@ tests/                  # 82 unit + integration tests, 24 fixtures
 | `mcp-trust` | Sigstore-style trust + runtime proxy | v0.1-alpha |
 | `arsp` | Runtime security plane: capability tokens, IFC, output sealing | research |
 | `agent-config-injection` | Workspace config-file injection scanner (`.cursorrules`, `mcp.json`) | v0.1.8 |
-| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.17 |
+| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.18 |
 
 The composition story: `agent-config-injection` scans config files in a
 workspace, `mcp-intent-sentinel` scans the server source before install,

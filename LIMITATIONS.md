@@ -1,4 +1,67 @@
-# LIMITATIONS — v0.1.17
+# LIMITATIONS — v0.1.18
+
+## Changes since v0.1.17
+
+v0.1.18 closes the "corpus is tautological" half of L20: not by adding
+in-the-wild captures (still rare in the MCP ecosystem) but by making the
+external-source provenance of every existing label visible and adding two
+fixtures from previously-uncovered documented attack classes.
+
+**`documented_source` field on every label.** Every entry in
+`eval/labeled/labels.json` now carries an explicit `documented_source`
+string. For Anthropic-monorepo benigns: "Anthropic-maintained, source
+of truth." For synthetic-malicious fixtures: the external research /
+disclosure / OWASP MCP Top 10 category the fixture models. The field
+is purely informational — the harness doesn't consume it — but it
+makes "this fixture is grounded in a documented attack class, not just
+made up by MIS authors" auditable per-label rather than a hand-wave at
+the README level.
+
+**Two new fixtures from previously-uncovered detection paths:**
+
+1. `tests/corpus/malicious/auth_override_pre_authorized` — tool
+   description claims the user has "pre-authorized" destructive
+   actions. Maps to MCP06 (IntentFlowSubversion) in the project's own
+   OWASP Top 10 mapping; parent class is OWASP LLM Top 10 v2
+   "Excessive Agency". The DESC_AUTH_OVERRIDE signal existed in the
+   enum and had detection wiring, but no end-to-end fixture exercised
+   it. v0.1.18 adds the regression test.
+
+2. `tests/corpus/malicious/unicode_steg_description` — tool description
+   contains zero-width space (U+200B) and left-to-right embed (U+202A)
+   in Unicode Cf category. Hidden from a human reader, parsed by the
+   LLM. Anthropic's MCP tool-description guidance specifically warns
+   against Cf/Cs code points; OWASP MCP Top 10 #01 (PromptInjection) +
+   #03 (ToolPoisoning) cover the class. The DESC_UNICODE_STEG signal
+   existed without fixture coverage; v0.1.18 closes that.
+
+Both fixtures verdict `malicious` via r5.tool_poisoning. Tests 82 -> 84.
+
+**L20 partial -> L20 less partial.** The "corpus tautological" critique
+remains valid in absolute terms — the synthetic-flagged fixtures are
+still MIS-author-written, and adding more synthetic doesn't add
+in-the-wild coverage. But v0.1.18 raises the bar in two ways:
+  (a) Every synthetic fixture now carries explicit external-source
+      provenance via `documented_source`. A reviewer can see "this
+      fixture is grounded in X documented class" rather than "this
+      fixture exists because MIS authors wanted to test rule Y."
+  (b) Two new fixtures cover signals (DESC_AUTH_OVERRIDE,
+      DESC_UNICODE_STEG) that had detection wiring but no end-to-end
+      coverage, which is the maximum-impact form of synthetic-fixture
+      addition (closes coverage gaps in the EXISTING ruleset rather
+      than self-test against rules MIS already targets).
+
+True L20 closure still requires in-the-wild captures, which the
+ecosystem doesn't yet have. The `documented_source` field is the
+forward-compatible infrastructure to absorb those when they appear:
+an in-the-wild label will carry a citable disclosure URL, the
+synthetic flag will be absent, and the in_the_wild_recall metric
+(v0.1.15) will start to mean something.
+
+84/84 tests pass. No `mis/` source changes.
+
+Closes v0.1.14 critique #2 (partial — the corpus side; in-the-wild
+remains roadmap-bound by ecosystem availability).
 
 ## Changes since v0.1.16
 

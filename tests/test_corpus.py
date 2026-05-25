@@ -65,6 +65,14 @@ MALICIOUS_EXPECTATIONS = {
     # state but doesn't send in the same call. r4 exempted it post-v0.1.10
     # (intent=file). r12.staged_stash catches the read-without-local-use shape.
     "staged_stash_ssh_read": {"verdict": "suspicious", "rule_id_substr": "staged_stash"},
+    # v0.1.18 — DESC_AUTH_OVERRIDE regression test. Tool description claims
+    # the user has pre-authorized destructive actions. r5.tool_poisoning fires
+    # malicious on auth-override phrasing per the existing rule logic.
+    "auth_override_pre_authorized": {"verdict": "malicious", "rule_id_substr": "tool_poisoning"},
+    # v0.1.18 — DESC_UNICODE_STEG regression test. Tool description contains
+    # invisible Cf-category Unicode code points (zero-width space, LRE).
+    # r5.tool_poisoning fires malicious on unicode_steg per the existing rule.
+    "unicode_steg_description": {"verdict": "malicious", "rule_id_substr": "tool_poisoning"},
     # v0.1.13 — legit-API-client downgrade regression. NOT morally malicious;
     # the fixture is a real Notion API client that reads NOTION_API_KEY from
     # env and uses it as Bearer to api.notion.com. Pre-v0.1.13 r1 verdicted
