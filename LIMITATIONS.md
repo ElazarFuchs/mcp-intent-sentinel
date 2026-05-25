@@ -1,4 +1,87 @@
-# LIMITATIONS — v0.1.12
+# LIMITATIONS — v0.1.13
+
+## Changes since v0.1.12
+
+v0.1.13 ships the "host-vs-intent matching" piece L23 was tracking as
+roadmap. The pre-v0.1.13 r1 fired malicious on every secret-to-request
+shape — including legitimate API clients that read an env-var key and
+send it as Bearer to their own declared API host. The v0.1.9 LLM-fallback
+pilot's pre-v0.1.10 verdict on `mcp-server-google-maps` / `mcp-figma` /
+`mcp-server-gitlab` was the canonical FP class; v0.1.10 narrowed it via
+the r4 role-aware exemption, but r1 itself was unchanged and would still
+fire malicious if the LLM emitted SECRET_IN_REQUEST.
+
+v0.1.13 adds the second axis: **host claims from the manifest**.
+
+**`extract_host_claims(root)` in mis/analyzers/manifest.py.** Parses
+package.json + pyproject.toml for host substrings the package self-
+declares as upstream:
+- Package name parts (e.g. `notion-mcp` → `notion`).
+- `homepage` URL.
+- `repository.url` (package.json) / `[project.urls].*` (pyproject.toml).
+
+**URL gate — the v0.1.13 attack-model concession.** Claims are returned
+only when the manifest declares AT LEAST one URL field (`homepage` /
+`repository.url` / `[project.urls].*`). Name-only manifests return `[]`.
+The motivating attack: the `silent_exfiltrator` fixture is named
+`weather-helper-mcp` and exfils to `telemetry.weather-helper-cdn.example`
+— a name-only claim "weather" would substring-match the exfil host and
+silently downgrade actual exfil to suspicious. Requiring a URL field
+forces a second attestation; the marginal attacker cost (declare a
+homepage that matches the attack host) is small but non-zero and
+combined with package-name agreement is a meaningful signal.
+
+**`ScanResult.host_claims: list[str]`.** Engine populates this after
+manifest scan; classifier rules consume it.
+
+**`r1.secret_to_request` — host-claim partition.**
+Aggregates URL hosts from every `py.net.literal_host` / `js.net.literal_host`
+finding in the scan. If `host_claims` is non-empty AND every observed
+host has a claim substring inside it (host-only matching, NOT path), r1
+downgrades from `malicious` (0.95) to `suspicious` (0.55). If ANY host
+is unclaimed, r1 fires malicious as before and names the unclaimed host
+count in the reason. Host-only matching prevents path-word collisions
+(a package named `search-mcp` doesn't get a pass for the path
+`/search/code` on `api.github.com`).
+
+**New regression fixture:**
+`tests/corpus/malicious/legit_api_client_host_claim_downgrade` — a
+`notion-mcp` package with `[project.urls] Homepage = "https://www.notion.so"`
+that reads `NOTION_API_KEY` from env and sends it as Bearer to
+`https://api.notion.com/v1/search`. Pre-v0.1.13 r1 would have fired
+malicious (the openai_key_in_header shape). v0.1.13 the host-claim
+match downgrades to `suspicious`. Lives in `malicious/` because that's
+where rule-firing fixtures live in this test suite; the directory name
+is technical, not semantic. Tests 81 -> 82.
+
+**51-server eval at v0.1.13** — no regression on the existing
+distribution. `mcp-server-perplexity` (the lone malicious in v0.1.10+
+evals) lacks a verifiable URL field and stays malicious; the
+Anthropic-monorepo packages don't have env-key-to-Bearer shapes in
+their static-detected behavior so r1 doesn't fire on them in the first
+place.
+
+## L26 (placeholder) — claim-substring attack surface
+
+The host-claim downgrade is substring-based; an attacker who controls
+both the package name AND the URL host (e.g. publishes `notion-mcp`
+that POSTs to `api.notion.evil.example`) can satisfy the substring
+check and downgrade their own exfil to `suspicious`. The URL gate
+(L23 closure) raises the bar — they'd also need to declare a homepage
+— but doesn't eliminate the gap. Stronger defenses on the roadmap:
+- Canonical-API-host allowlist (curated list of api.notion.com,
+  api.openai.com, etc.). Maintenance burden but eliminates substring
+  ambiguity.
+- DNS-based verification: confirm the declared homepage resolves to
+  the same registrable domain as the called host. Network-bound.
+- Multi-component agreement: require name AND homepage AND repository
+  URL to all reference the same domain. Three signals reduce the
+  attacker's free-naming surface.
+
+None of these are shipping in v0.1.13. The downgrade is a `suspicious`
+verdict, not a `benign` one — so even an attacker-successful downgrade
+still surfaces the shape to anyone running `--fail-on-verdict
+suspicious` or doing manual triage.
 
 ## Changes since v0.1.11
 

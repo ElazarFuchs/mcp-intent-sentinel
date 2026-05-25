@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mcp-intent-sentinel"
-version = "0.1.12"
+version = "0.1.13"
 description = "Intent classifier for MCP servers. Goes beyond pattern matching: parses tool registrations, traces data/exec/network flow, and emits a benign/suspicious/malicious verdict with OWASP MCP Top 10 mapping."
 requires-python = ">=3.11"
 dependencies = [

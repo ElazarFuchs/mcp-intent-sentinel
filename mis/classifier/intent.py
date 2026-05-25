@@ -17,8 +17,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Optional
 
+import re
+
 from mis.analyzers.types import BehaviorSignal, ToolProfile
 from mis.findings import Finding, ScanResult, Severity, Verdict
+
+
+_URL_HOST_RE = re.compile(r"https?://([a-z0-9.-]+)", re.IGNORECASE)
+
+
+def _extract_url_hosts(text: str) -> list[str]:
+    """Return the host portion of every http(s) URL in `text`. Lowercased."""
+    return [h.lower() for h in _URL_HOST_RE.findall(text)]
 
 
 # Ordered higher = stronger.
@@ -45,7 +55,10 @@ class RuleHit:
     reason: str        # human-readable, used in the report
 
 
-IntentRule = Callable[[list[Finding], list[ToolProfile]], Optional[RuleHit]]
+# v0.1.13: rules now also take the ScanResult so they can consult `host_claims`
+# (manifest-declared hosts) and any other result-level metadata. Rules that
+# don't need it accept and ignore the third argument.
+IntentRule = Callable[[list[Finding], list[ToolProfile], "ScanResult | None"], Optional[RuleHit]]
 
 
 # --- the rules ---------------------------------------------------------------
@@ -55,7 +68,7 @@ IntentRule = Callable[[list[Finding], list[ToolProfile]], Optional[RuleHit]]
 # threat-model. Existing rules should never silently change verdict — bump the
 # rule id (r1.1 -> r1.2) so reports stay diffable.
 
-def _r1_secret_to_request(findings: list[Finding], _tools) -> Optional[RuleHit]:
+def _r1_secret_to_request(findings: list[Finding], _tools, result=None) -> Optional[RuleHit]:
     """Hard malicious: secret-bearing data flows into outbound request.
 
     Covers all the secret-to-request shapes the v0.1.x analyzers emit:
@@ -64,6 +77,17 @@ def _r1_secret_to_request(findings: list[Finding], _tools) -> Optional[RuleHit]:
     - client-state poisoning: secret in `s.headers`, then `s.get(url)` (v0.1.2)
     - inter-procedural: helper's body matches; called from tool (v0.1.2)
     - tainted-arg-to-net-helper: tool passes secret into helper that net-calls (v0.1.2)
+
+    v0.1.13 — host-claim downgrade. When ScanResult.host_claims is non-empty
+    (the package self-declares hosts via name / homepage / repository.url),
+    partition the findings into:
+      claim_matched — the finding's evidence string contains a claim substring
+                       (the secret went to a host the package admits talking to)
+      claim_unmatched — host doesn't match any claim (potential real exfil)
+    If EVERY finding is claim-matched, downgrade verdict to `suspicious`
+    (still surface the shape — env-key-to-API is a real risk vector — but
+    don't cry malicious on legit API clients). If any finding is unmatched,
+    fire malicious as usual; the reason names the unmatched host count.
     """
     secret_rules = {
         "py.exfil.secret_in_request",
@@ -75,8 +99,50 @@ def _r1_secret_to_request(findings: list[Finding], _tools) -> Optional[RuleHit]:
     hits = [f for f in findings if f.rule in secret_rules]
     if not hits:
         return None
-    # Compose a short, accurate reason — name the path so the report is useful.
+
     paths = sorted({f.rule.split(".")[-1] for f in hits})
+
+    # v0.1.13 — host-claim partition. Claims are substrings (lowercased)
+    # of the package's self-declared hosts. The exfil findings themselves
+    # usually carry only the call-site source (e.g. `client.post(...)`)
+    # without the URL literal — the URL lives in a separate
+    # `py.net.literal_host` finding emitted by the same call. So we
+    # aggregate URL hosts from ALL `py.net.literal_host` / `js.net.literal_host`
+    # findings in this scan, and downgrade only when EVERY observed host
+    # matches a claim. Matching is HOST-only, not path-only (a package
+    # named `search-mcp` shouldn't get a pass for `https://api.github.com/
+    # search/code` — `search` is in the path, not the host).
+    host_claims = list(getattr(result, "host_claims", []) or [])
+    literal_host_findings = [
+        f for f in findings if f.rule in {"py.net.literal_host", "js.net.literal_host"}
+    ]
+    all_hosts: list[str] = []
+    for f in literal_host_findings:
+        all_hosts.extend(_extract_url_hosts((f.evidence or "").lower()))
+
+    every_host_is_a_claim = (
+        host_claims and all_hosts
+        and all(any(c in h for c in host_claims) for h in all_hosts)
+    )
+
+    if every_host_is_a_claim:
+        # Every exfil-shaped finding goes to a host the package self-declares.
+        # Downgrade — surface the shape (env-key-to-API is real risk), but
+        # don't fire malicious on a legit API client.
+        return RuleHit(
+            rule_id="r1.secret_to_request",
+            verdict="suspicious",
+            confidence=0.55,
+            reason=(
+                f"{len(hits)} site(s) where secret-bearing data reaches an outbound "
+                f"network request. ALL hit URLs match a host the package self-declares "
+                f"(manifest host claims: {', '.join(host_claims[:4])}). Verdict downgraded "
+                "from malicious — this is the legit API-client shape (env key as Bearer to "
+                "the package's own declared API). Still suspicious because the same shape "
+                "becomes exfil if the URL is later changed to attacker-controlled."
+            ),
+        )
+
     return RuleHit(
         rule_id="r1.secret_to_request",
         verdict="malicious",
@@ -84,12 +150,18 @@ def _r1_secret_to_request(findings: list[Finding], _tools) -> Optional[RuleHit]:
         reason=(
             f"{len(hits)} site(s) where secret-bearing data (env var or sensitive file) "
             f"reaches an outbound network request. Path shapes: {', '.join(paths)}. "
+            + (
+                f"At least one observed host ({', '.join(sorted(set(all_hosts))[:3])}) "
+                f"is NOT in the package's manifest claims "
+                f"({', '.join(host_claims[:4]) or 'no claims'}). "
+                if host_claims and all_hosts else ""
+            ) +
             "Exfiltration channel — not legitimate tool behavior."
         ),
     )
 
 
-def _r2_bcc_injection(findings: list[Finding], _tools) -> Optional[RuleHit]:
+def _r2_bcc_injection(findings: list[Finding], _tools, _result=None) -> Optional[RuleHit]:
     """Postmark-mcp backdoor pattern: email tool sets BCC."""
     hits = [f for f in findings if f.rule == "js.email.bcc_injection"]
     if not hits:
@@ -106,7 +178,7 @@ def _r2_bcc_injection(findings: list[Finding], _tools) -> Optional[RuleHit]:
     )
 
 
-def _r3_lifecycle_dropper(findings: list[Finding], _tools) -> Optional[RuleHit]:
+def _r3_lifecycle_dropper(findings: list[Finding], _tools, _result=None) -> Optional[RuleHit]:
     """npm preinstall/postinstall that fetches and execs remote code."""
     hits = [f for f in findings if f.rule == "manifest.npm.lifecycle_dropper"]
     hits += [f for f in findings if f.rule == "manifest.pypi.setup_dropper"]
@@ -128,7 +200,7 @@ _R4_FS_ROLE_EXEMPT = {"file", "shell", "fetch"}
 _R4_CREDENTIAL_DESC_KEYWORDS = ("credential", "key", "token", "auth", "secret")
 
 
-def _r4_intent_mismatch(_findings, tools: list[ToolProfile]) -> Optional[RuleHit]:
+def _r4_intent_mismatch(_findings, tools: list[ToolProfile], _result=None) -> Optional[RuleHit]:
     """Tool's declared intent does not match its observed behavior.
 
     Example: a 'calculator' tool that issues outbound HTTP, or a 'format'
@@ -206,7 +278,7 @@ def _r4_intent_mismatch(_findings, tools: list[ToolProfile]) -> Optional[RuleHit
     )
 
 
-def _r5_tool_poisoning(findings: list[Finding], tools: list[ToolProfile]) -> Optional[RuleHit]:
+def _r5_tool_poisoning(findings: list[Finding], tools: list[ToolProfile], _result=None) -> Optional[RuleHit]:
     """Hidden instructions in tool descriptions = tool poisoning (MCP03).
 
     A single hit is enough to call it malicious when the hidden text contains
@@ -270,7 +342,7 @@ def _r5_tool_poisoning(findings: list[Finding], tools: list[ToolProfile]) -> Opt
     )
 
 
-def _r6_command_injection(findings: list[Finding], tools: list[ToolProfile]) -> Optional[RuleHit]:
+def _r6_command_injection(findings: list[Finding], tools: list[ToolProfile], _result=None) -> Optional[RuleHit]:
     """Tool input flows into shell exec.
 
     Role-aware (v0.1.7): if EVERY tool with EXEC_SHELL_WITH_INPUT declares
@@ -316,7 +388,7 @@ def _r6_command_injection(findings: list[Finding], tools: list[ToolProfile]) -> 
     )
 
 
-def _r7_typosquat(findings: list[Finding], _tools) -> Optional[RuleHit]:
+def _r7_typosquat(findings: list[Finding], _tools, _result=None) -> Optional[RuleHit]:
     """Package name close to a well-known MCP server."""
     hits = [f for f in findings if f.rule == "manifest.typosquat"]
     if not hits:
@@ -332,7 +404,7 @@ def _r7_typosquat(findings: list[Finding], _tools) -> Optional[RuleHit]:
     )
 
 
-def _r8_dynamic_exec(findings: list[Finding], _tools) -> Optional[RuleHit]:
+def _r8_dynamic_exec(findings: list[Finding], _tools, _result=None) -> Optional[RuleHit]:
     """eval / exec / new Function in tool body."""
     hits = [f for f in findings if f.rule in {"py.exec.dynamic", "js.exec.dynamic"}]
     if not hits:
@@ -348,7 +420,7 @@ def _r8_dynamic_exec(findings: list[Finding], _tools) -> Optional[RuleHit]:
     )
 
 
-def _r9_net_on_import(findings: list[Finding], _tools) -> Optional[RuleHit]:
+def _r9_net_on_import(findings: list[Finding], _tools, _result=None) -> Optional[RuleHit]:
     """Network call at module import time."""
     hits = [f for f in findings if f.rule in {"py.net.on_import", "js.net.on_import"}]
     if not hits:
@@ -364,7 +436,7 @@ def _r9_net_on_import(findings: list[Finding], _tools) -> Optional[RuleHit]:
     )
 
 
-def _r12_staged_stash(findings: list[Finding], _tools) -> Optional[RuleHit]:
+def _r12_staged_stash(findings: list[Finding], _tools, _result=None) -> Optional[RuleHit]:
     """Tool reads a secret (env or sensitive file) but the value is not
     used in this call body — possible staged-stash exfil.
 
@@ -398,7 +470,7 @@ def _r12_staged_stash(findings: list[Finding], _tools) -> Optional[RuleHit]:
     )
 
 
-def _r11_fingerprint_to_request(findings: list[Finding], _tools) -> Optional[RuleHit]:
+def _r11_fingerprint_to_request(findings: list[Finding], _tools, _result=None) -> Optional[RuleHit]:
     """Host-fingerprint data (platform.* / socket.gethostname / os.uname) flows
     into an outbound network call. Added v0.1.6 after the model-compliance eval:
     when prompted for env-var exfil, frontier models often refuse the literal
@@ -449,7 +521,7 @@ def classify(result: ScanResult, tools: list[ToolProfile]) -> list[RuleHit]:
     """
     hits: list[RuleHit] = []
     for _rid, rule in _RULES:
-        h = rule(result.findings, tools)
+        h = rule(result.findings, tools, result)
         if h is not None:
             hits.append(h)
 

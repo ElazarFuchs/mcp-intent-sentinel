@@ -65,6 +65,16 @@ MALICIOUS_EXPECTATIONS = {
     # state but doesn't send in the same call. r4 exempted it post-v0.1.10
     # (intent=file). r12.staged_stash catches the read-without-local-use shape.
     "staged_stash_ssh_read": {"verdict": "suspicious", "rule_id_substr": "staged_stash"},
+    # v0.1.13 — legit-API-client downgrade regression. NOT morally malicious;
+    # the fixture is a real Notion API client that reads NOTION_API_KEY from
+    # env and uses it as Bearer to api.notion.com. Pre-v0.1.13 r1 verdicted
+    # malicious (env-key -> outbound). v0.1.13's host-claim partition matches
+    # the pyproject `notion-mcp` name against the api.notion.com host and
+    # downgrades to suspicious. (Lives in `malicious/` because that's where
+    # rule-firing fixtures live in this test suite — the directory name is
+    # technical, not semantic; see also runtime_context_exfil which is in
+    # malicious/ but verdicts suspicious for similar reasons.)
+    "legit_api_client_host_claim_downgrade": {"verdict": "suspicious", "rule_id_substr": "secret_to_request"},
 }
 
 BENIGN_FIXTURES = [

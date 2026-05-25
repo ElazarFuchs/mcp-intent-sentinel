@@ -236,5 +236,9 @@ def scan_directory(root: Path, *, source: str | None = None) -> tuple[ScanResult
     # import an I/O-capable module? If yes and we still extracted zero behavior
     # from any tool, the analyzer is shallow on this server, not the server idle.
     result.io_capable_imports_present = _has_io_capable_imports(root)
+    # v0.1.13 — extract host claims from package.json / pyproject.toml so
+    # r1.secret_to_request can downgrade when a secret-bearing net call
+    # goes to a host the package self-declares.
+    result.host_claims = manifest_analyzer.extract_host_claims(root)
     hits = classify(result, tools)
     return result, hits

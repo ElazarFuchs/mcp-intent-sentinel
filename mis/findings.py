@@ -135,6 +135,13 @@ class ScanResult:
     # Used by the classifier to distinguish "benign because nothing to analyze"
     # (calculator) from "shallow because analyzer didn't follow the I/O".
     io_capable_imports_present: bool = False
+    # v0.1.13 — host claims extracted from package.json / pyproject.toml.
+    # Substrings the package self-declares as its target hosts (package
+    # name parts, homepage, repository URL). r1.secret_to_request consults
+    # these to downgrade verdict when the net-call URL host overlaps a
+    # claim (legit API client talking to its declared service). Empty list
+    # means no claims could be extracted (file:// source / no manifest).
+    host_claims: list[str] = field(default_factory=list)
     verdict: Verdict | None = None
     verdict_reason: str = ""
     verdict_confidence: float = 0.0

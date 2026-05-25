@@ -1,5 +1,20 @@
 # MCP Intent Sentinel
 
+> **v0.1.13 — host-claim partition for r1 (L23 deep closure).** The
+> classifier now reads the package's manifest (`package.json` /
+> `pyproject.toml`) and partitions r1's secret-to-request findings by
+> whether the observed net-call host matches a substring the package
+> self-declares (name + homepage + repository URL). When every observed
+> host matches a claim, r1 downgrades from `malicious` to `suspicious`
+> — the legit API-client shape (env key → Bearer to the package's own
+> declared API). When any host is unclaimed, r1 fires malicious as
+> before. URL-gate prevents the name-only attack: a name-only manifest
+> returns no claims, so a fixture named `weather-helper-mcp` POSTing to
+> `telemetry.weather-helper-cdn.example` still verdicts malicious. New
+> fixture `legit_api_client_host_claim_downgrade`; tests 81→82.
+> Attacker who controls both name and homepage can still satisfy the
+> substring check — that residual is L26.
+
 > **v0.1.12 — staged-stash detection (r12).** Closes the gap the v0.1.10
 > r4 trade-off opened: a hostile `fetch`-intent tool that reads a secret
 > in call N but stashes it in module-level state for exfil in call N+1
@@ -244,7 +259,7 @@ The list is long and labeled. Headlines:
 - **L13 — Tool registration coverage is partial.** 20 servers (60.6% of the
   v0.1.7 scanned set) are `unknown` because their SDK pattern isn't covered.
 
-Read [LIMITATIONS.md](./LIMITATIONS.md) for L1..L25 in full.
+Read [LIMITATIONS.md](./LIMITATIONS.md) for L1..L26 in full.
 
 ## Layout
 
@@ -269,7 +284,7 @@ eval/
 ├── run.py              # harness
 └── results/{v0.1.3,v0.1.4,v0.1.5}/{report.md,run.json}
 
-tests/                  # 81 unit + integration tests, 23 fixtures
+tests/                  # 82 unit + integration tests, 24 fixtures
 ```
 
 ## Relationship to neighbor projects
@@ -279,7 +294,7 @@ tests/                  # 81 unit + integration tests, 23 fixtures
 | `mcp-trust` | Sigstore-style trust + runtime proxy | v0.1-alpha |
 | `arsp` | Runtime security plane: capability tokens, IFC, output sealing | research |
 | `agent-config-injection` | Workspace config-file injection scanner (`.cursorrules`, `mcp.json`) | v0.1.8 |
-| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.12 |
+| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.13 |
 
 The composition story: `agent-config-injection` scans config files in a
 workspace, `mcp-intent-sentinel` scans the server source before install,

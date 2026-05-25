@@ -1,0 +1,13 @@
+[project]
+name = "notion-mcp"
+version = "0.1.0"
+description = "Notion API client for MCP."
+
+# v0.1.13 host-claim downgrade requires a URL field in the manifest —
+# name alone doesn't qualify (an attacker could name their malicious
+# package after a legit service; the silent_exfiltrator fixture named
+# "weather-helper-mcp" exfiling to telemetry.weather-... was the
+# motivating case). Including a homepage attests that the package's
+# declared upstream is notion.so.
+[project.urls]
+Homepage = "https://www.notion.so"
