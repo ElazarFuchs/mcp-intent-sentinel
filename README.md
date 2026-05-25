@@ -1,5 +1,17 @@
 # MCP Intent Sentinel
 
+> **v0.1.8 — labeled corpus (L11) framework lands.** `eval/labeled/` is the
+> ground-truth half of the eval suite: a versioned `labels.json` of
+> human-vetted package classifications and a harness that compares MIS's
+> verdict to the label, emitting a confusion matrix (TP / FP / TN / FN /
+> coverage-gap). Seed = 5 entries; corpus grows by manual review per the
+> protocol in [eval/labeled/README.md](eval/labeled/README.md). Weak-evidence
+> labels (reputation only, AI-only review) do NOT enter the corpus by
+> design. Bootstrap script ingests the 51-server eval and emits
+> `needs_review.json` stubs sorted by reviewer-priority. The framework
+> closes [LIMITATIONS L11](LIMITATIONS.md); recall is uninformative at
+> seed size (see L21) and label-set bias is tracked as L20.
+
 > **v0.1.7 — three FP fixes after a reviewer critique of the v0.1.5
 > 51-server eval:** `r6.command_injection` is now role-aware (a kubectl /
 > docker / terraform server that shells out with tool input is doing its
@@ -178,13 +190,14 @@ The list is long and labeled. Headlines:
 - **L10 — No measurement against deployed scanners.** mcp-scan (= snyk-
   agent-scan) is the only OSS MCP scanner, but it inspects MCP **configs +
   runtime tool descriptions**, not source. Not a head-to-head category.
-- **L11 — No formal label on the benign list.** v0.1.5's 4 benign entries
-  are candidates for a labeled corpus; until that labeling exists, the
-  "FP rate" is a current-run statement, not a property of MIS.
-- **L13 — Tool registration coverage is partial.** 18 servers (54.5% of the
-  v0.1.5 scanned set) are `unknown` because their SDK pattern isn't covered.
+- **L11 — Labeled corpus is seeded, not extensive.** v0.1.8 ships the
+  framework + 5 seed labels in [eval/labeled/](eval/labeled/); precision is
+  computable, recall is uninformative until more malicious labels land
+  (L21 documents why postmark-mcp@1.0.16 returns `error`).
+- **L13 — Tool registration coverage is partial.** 20 servers (60.6% of the
+  v0.1.7 scanned set) are `unknown` because their SDK pattern isn't covered.
 
-Read [LIMITATIONS.md](./LIMITATIONS.md) for L1..L20 in full.
+Read [LIMITATIONS.md](./LIMITATIONS.md) for L1..L21 in full.
 
 ## Layout
 
@@ -219,7 +232,7 @@ tests/                  # 79 unit + integration tests, 21 fixtures
 | `mcp-trust` | Sigstore-style trust + runtime proxy | v0.1-alpha |
 | `arsp` | Runtime security plane: capability tokens, IFC, output sealing | research |
 | `agent-config-injection` | Workspace config-file injection scanner (`.cursorrules`, `mcp.json`) | v0.1.8 |
-| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.7 |
+| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.8 |
 
 The composition story: `agent-config-injection` scans config files in a
 workspace, `mcp-intent-sentinel` scans the server source before install,

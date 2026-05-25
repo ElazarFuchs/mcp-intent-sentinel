@@ -1,4 +1,52 @@
-# LIMITATIONS — v0.1.7
+# LIMITATIONS — v0.1.8
+
+## Changes since v0.1.7
+
+v0.1.8 ships `eval/labeled/` — the framework for L11 (no labeled corpus).
+This is the foundation roadmap item from the v0.1.5 critique: every FP /
+FN rate MIS claims must compare against ground truth, not against MIS's
+own verdict distribution. The harness (`run.py`) scans every labeled
+package and produces a confusion matrix; the bootstrap (`bootstrap.py`)
+ingests the 51-server `eval/run.py` results and emits `needs_review`
+stubs sorted by reviewer-priority. Seed = 5 entries (1 known-malicious,
+4 known-benign Anthropic-monorepo packages). Counts on the v0.1.8 run:
+1 TN, 3 coverage-gap, 1 error (postmark-mcp@1.0.16 was yanked from npm
+after disclosure — the entry stays in the corpus because the label is
+real even if the artifact is unfetchable). The corpus grows by manual
+review; weak-evidence labels do NOT ship to `labels.json` by design.
+
+## L20 (new) — label-set bias
+
+Any precision/recall computed by `eval/labeled/run.py` is conditional on
+the label set. A corpus that over-represents Anthropic-monorepo packages
+will report high precision (those packages are benign and look benign),
+but that high precision generalizes weakly to the long tail of community
+servers. Two mitigations on the roadmap:
+
+1. **Diverse sampling.** New labels should preferentially go to packages
+   that are (a) high-download, (b) non-Anthropic, (c) cover SDK shapes
+   MIS doesn't yet detect. The bootstrap's `review_priority` field
+   surfaces malicious / suspicious / shallow / unknown verdicts FIRST —
+   so most-impactful coverage gaps get human eyes first.
+2. **Inter-annotator agreement (later).** v0.1.8 is single-reviewer. A
+   future revision should require two independent reviewers per label
+   and report Cohen's kappa as a corpus-quality metric. Until that
+   lands, treat per-label `confidence` as the only reviewer-supplied
+   uncertainty signal.
+
+## L21 (new) — postmark-mcp@1.0.16 is unfetchable
+
+The most-confident `malicious` label in the v0.1.8 seed corpus is
+`postmark-mcp@1.0.16` — the known in-the-wild backdoor disclosed
+September 2025. The version was yanked from npm; `npm pack` against
+that exact version now returns an error, so the harness scores it as
+`error`, not as a true-positive or false-negative. The label stays in
+the corpus because the underlying claim is the strongest one in the
+public record, and a future similar incident (or out-of-band tarball
+preservation) will need the same label format. Recall numbers in the
+v0.1.8 confusion matrix are correspondingly UNINFORMATIVE — there is
+exactly one labeled-malicious row and it doesn't execute. Recall
+becomes meaningful only once additional malicious labels land.
 
 ## Changes since v0.1.6
 

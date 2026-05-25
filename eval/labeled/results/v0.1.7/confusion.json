@@ -1,0 +1,140 @@
+{
+  "mis_version": "0.1.7",
+  "rows": [
+    {
+      "name": "postmark-mcp",
+      "ecosystem": "npm",
+      "source": "npm:postmark-mcp@1.0.16",
+      "label": "malicious",
+      "confidence": 0.99,
+      "reviewer": "EF",
+      "date_labeled": "2026-05-25",
+      "rationale_first_60": "Known in-the-wild backdoor disclosed September 2025 — the fi",
+      "ok": false,
+      "duration_seconds": 5.03,
+      "error": "ExtractionError: npm pack failed: ",
+      "verdict": null,
+      "verdict_confidence": null,
+      "verdict_reason": null,
+      "rule_hits": null,
+      "tools_detected": null,
+      "tools_with_behavior": null,
+      "classification": "error"
+    },
+    {
+      "name": "mcp-server-time",
+      "ecosystem": "pypi",
+      "source": "pypi:mcp-server-time",
+      "label": "benign",
+      "confidence": 0.85,
+      "reviewer": "EF",
+      "date_labeled": "2026-05-25",
+      "rationale_first_60": "Anthropic-maintained server in the modelcontextprotocol/serv",
+      "ok": true,
+      "duration_seconds": 24.84,
+      "error": null,
+      "verdict": "unknown",
+      "verdict_confidence": 0.0,
+      "verdict_reason": "Static analysis did not detect any MCP tool registration in this source. This is NOT a benign verdict — it means MIS did not recognize the SDK pattern in use (see LIMITATIONS.md L13 for the SDKs currently covered). Treat this server as unanalyzed until: (a) a manual review is performed, (b) MIS supp",
+      "rule_hits": [],
+      "tools_detected": 0,
+      "tools_with_behavior": 0,
+      "classification": "coverage_gap"
+    },
+    {
+      "name": "@modelcontextprotocol/server-everything",
+      "ecosystem": "npm",
+      "source": "npm:@modelcontextprotocol/server-everything",
+      "label": "benign",
+      "confidence": 0.9,
+      "reviewer": "EF",
+      "date_labeled": "2026-05-25",
+      "rationale_first_60": "Anthropic's reference \"kitchen sink\" server demonstrating ev",
+      "ok": true,
+      "duration_seconds": 5.86,
+      "error": null,
+      "verdict": "benign",
+      "verdict_confidence": 0.6,
+      "verdict_reason": "Tools were detected and no intent-classifier rule fired. Be aware: a benign verdict is bounded by what the v0.1 ruleset covers (see LIMITATIONS.md L4); novel attack shapes may pass through.",
+      "rule_hits": [],
+      "tools_detected": 10,
+      "tools_with_behavior": 6,
+      "classification": "TN"
+    },
+    {
+      "name": "@modelcontextprotocol/server-filesystem",
+      "ecosystem": "npm",
+      "source": "npm:@modelcontextprotocol/server-filesystem",
+      "label": "benign",
+      "confidence": 0.8,
+      "reviewer": "EF",
+      "date_labeled": "2026-05-25",
+      "rationale_first_60": "Anthropic-maintained server in the modelcontextprotocol/serv",
+      "ok": true,
+      "duration_seconds": 3.3,
+      "error": null,
+      "verdict": "unknown",
+      "verdict_confidence": 0.0,
+      "verdict_reason": "Static analysis did not detect any MCP tool registration in this source. This is NOT a benign verdict — it means MIS did not recognize the SDK pattern in use (see LIMITATIONS.md L13 for the SDKs currently covered). Treat this server as unanalyzed until: (a) a manual review is performed, (b) MIS supp",
+      "rule_hits": [],
+      "tools_detected": 0,
+      "tools_with_behavior": 0,
+      "classification": "coverage_gap"
+    },
+    {
+      "name": "mcp-server-fetch",
+      "ecosystem": "pypi",
+      "source": "pypi:mcp-server-fetch",
+      "label": "benign",
+      "confidence": 0.85,
+      "reviewer": "EF",
+      "date_labeled": "2026-05-25",
+      "rationale_first_60": "Anthropic-maintained server in the modelcontextprotocol/serv",
+      "ok": true,
+      "duration_seconds": 35.88,
+      "error": null,
+      "verdict": "shallow",
+      "verdict_confidence": 0.0,
+      "verdict_reason": "Tools were detected (1) but MIS extracted ZERO behavior signals from any of them — not even PURE_COMPUTE. This means the analyzer recognized the tool names but failed to follow ANY of their implementation logic — typically because tool bodies route through class methods (L18), helpers across modules",
+      "rule_hits": [],
+      "tools_detected": 1,
+      "tools_with_behavior": 0,
+      "classification": "coverage_gap"
+    }
+  ],
+  "confusion": {
+    "by_class": {
+      "TP": 0,
+      "FP": 0,
+      "TN": 1,
+      "FN": 0,
+      "coverage_gap": 3,
+      "error": 1,
+      "unknown_label": 0
+    },
+    "cells": [
+      {
+        "label": "benign",
+        "verdict": "benign",
+        "count": 1
+      },
+      {
+        "label": "benign",
+        "verdict": "shallow",
+        "count": 1
+      },
+      {
+        "label": "benign",
+        "verdict": "unknown",
+        "count": 2
+      }
+    ],
+    "metrics": {
+      "precision": null,
+      "recall": null,
+      "n_threat_labels": 0,
+      "n_benign_labels": 1,
+      "n_total": 5
+    }
+  }
+}
