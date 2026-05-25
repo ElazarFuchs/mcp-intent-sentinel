@@ -1,4 +1,50 @@
-# LIMITATIONS — v0.1.13
+# LIMITATIONS — v0.1.14
+
+## Changes since v0.1.13
+
+v0.1.14 ships two corpus-side changes from the v0.1.13 reviewer critique
+(L20 / L21 partial closure). Neither touches `mis/` code.
+
+**`labels.json` — 10 synthetic-marked malicious labels added.** Pre-v0.1.14
+the corpus had exactly one `malicious` entry — `postmark-mcp@1.0.16` —
+which was YANKED from npm after disclosure so the harness reported it
+as `error`; recall was effectively undefined. v0.1.14 adds the 10
+`tests/corpus/malicious/*` fixtures as `file://` labels with
+`synthetic: true`. Each entry is honest about being a hand-authored
+regression test, NOT an in-the-wild capture. The `synthetic` flag is
+load-bearing — reports MUST split synthetic-vs-in-the-wild recall and
+never cite synthetic-only numbers as evidence of real-world coverage.
+Confusion at v0.1.14: 9 TP (all synthetic), 1 TN (server-everything),
+3 coverage_gap (server-time / server-filesystem / server-fetch — SDKs
+MIS doesn't follow), 1 error (postmark yanked), 1 TP for the suspicious
+runtime_context_exfil synthetic.
+
+**`labels_candidates.json` — AI-proposed review queue.** New
+`propose_candidates.py` reads the cached LLM-fallback pilot output
+(`eval/llm_fallback/results/v0.1.10/pilot.json`) and emits 12
+AI-proposed labels at `ai_confidence` 0.5-0.6, with full LLM
+rationale and signal extraction preserved as `ai_evidence`. Per the
+labeling protocol, these CANNOT enter `labels.json` automatically;
+they're a triage queue. The user reads each, reviews the source
+themselves, and (if agreed) writes a fresh rationale + initials and
+promotes manually to `labels.json`. README.md documents the
+promotion workflow explicitly.
+
+**L20 partial closure (corpus bias).** The seed had 4 Anthropic-
+monorepo benigns of 5 total labels — bias was real. v0.1.14 adds 10
+fixture-derived malicious entries + 12 community-derived AI proposals.
+The bias remains: synthetic-labeled malicious are MIS-authored, AI
+proposals are still AI-only. The framework now SUPPORTS bias-
+correction (the `synthetic` flag, the AI-proposal triage queue, the
+needs_review bootstrap) but the corpus itself only grows by human
+review.
+
+**L21 partial closure (recall uninformative).** Recall is now defined
+over 11 malicious-or-suspicious entries (10 synthetic + 1 postmark
+that errors). Synthetic recall: 9/9 (the 10th errors with extraction
+failure). All-corpus recall: 9/11 (treating extraction-error as miss).
+The `synthetic` flag is what makes this honest — citing the recall
+without splitting synthetic vs in-the-wild would be misleading.
 
 ## Changes since v0.1.12
 

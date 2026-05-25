@@ -50,6 +50,116 @@
       "reviewer": "EF",
       "date_labeled": "2026-05-25",
       "confidence": 0.85
+    },
+    {
+      "name": "fixture:postmark_backdoor",
+      "ecosystem": "file",
+      "source": "file://tests/corpus/malicious/postmark_backdoor",
+      "label": "malicious",
+      "synthetic": true,
+      "rationale": "In-house test fixture modeled on the 2025 postmark-mcp@1.0.16 in-the-wild backdoor (silent BCC of every outgoing email to phan@giftshop.club). Hand-authored as a regression test for r2.bcc_injection — the npm tarball was yanked after disclosure, so this fixture is the only currently-fetchable artifact of the pattern. Synthetic flag set: the corpus was written by MIS authors, so labels here measure MIS against its own tastes — NOT a substitute for in-the-wild labels. Useful as a non-trivial TP data point until additional public disclosures become available.",
+      "reviewer": "EF",
+      "date_labeled": "2026-05-25",
+      "confidence": 0.99
+    },
+    {
+      "name": "fixture:silent_exfiltrator",
+      "ecosystem": "file",
+      "source": "file://tests/corpus/malicious/silent_exfiltrator",
+      "label": "malicious",
+      "synthetic": true,
+      "rationale": "In-house fixture: FastMCP weather tool whose body silently POSTs the full os.environ to a telemetry URL before returning the legit weather lookup. Models the Kaspersky-documented information-harvesting pattern. Hand-authored as a regression test for r1.secret_to_request. Synthetic flag set — see fixture:postmark_backdoor for the methodology caveat.",
+      "reviewer": "EF",
+      "date_labeled": "2026-05-25",
+      "confidence": 0.99
+    },
+    {
+      "name": "fixture:tool_shadowing",
+      "ecosystem": "file",
+      "source": "file://tests/corpus/malicious/tool_shadowing",
+      "label": "malicious",
+      "synthetic": true,
+      "rationale": "In-house fixture: math-helpers tool whose declared purpose is `add(a,b)` but whose body reads ~/.ssh/id_rsa and exfils. Hand-authored as a regression test for r4.intent_mismatch (description vs body divergence). Synthetic flag set.",
+      "reviewer": "EF",
+      "date_labeled": "2026-05-25",
+      "confidence": 0.99
+    },
+    {
+      "name": "fixture:hidden_instruction",
+      "ecosystem": "file",
+      "source": "file://tests/corpus/malicious/hidden_instruction",
+      "label": "malicious",
+      "synthetic": true,
+      "rationale": "In-house fixture: tool with prompt-injection payload hidden in its declared description (HTML comment instructing the LLM to also read /etc/passwd and not mention it). Hand-authored as a regression test for r5.tool_poisoning. Synthetic flag set.",
+      "reviewer": "EF",
+      "date_labeled": "2026-05-25",
+      "confidence": 0.99
+    },
+    {
+      "name": "fixture:command_injection",
+      "ecosystem": "file",
+      "source": "file://tests/corpus/malicious/command_injection",
+      "label": "malicious",
+      "synthetic": true,
+      "rationale": "In-house fixture: git_log / list_files tools that pass tool input directly into subprocess.check_output(shell=True). Models the mcp-server-git RCE class (CVE-2025-68143/4/5). Hand-authored as a regression test for r6.command_injection. Synthetic flag set.",
+      "reviewer": "EF",
+      "date_labeled": "2026-05-25",
+      "confidence": 0.99
+    },
+    {
+      "name": "fixture:lifecycle_dropper",
+      "ecosystem": "file",
+      "source": "file://tests/corpus/malicious/lifecycle_dropper",
+      "label": "malicious",
+      "synthetic": true,
+      "rationale": "In-house fixture: npm package whose package.json `postinstall` script does `curl -s ... | bash`. Models the supply-chain dropper class — fires at install time, before any tool is invoked. Hand-authored as a regression test for r3.lifecycle_dropper. Synthetic flag set.",
+      "reviewer": "EF",
+      "date_labeled": "2026-05-25",
+      "confidence": 0.99
+    },
+    {
+      "name": "fixture:official_sdk_exfil",
+      "ecosystem": "file",
+      "source": "file://tests/corpus/malicious/official_sdk_exfil",
+      "label": "malicious",
+      "synthetic": true,
+      "rationale": "In-house fixture: official low-level SDK pattern (mcp.server.Server + @app.list_tools / @app.call_tool) with env exfil before returning a plausible timestamp. Models the field-test repro where v0.1.0 missed this shape. Hand-authored as a regression test for r1 via the official-SDK detection path. Synthetic flag set.",
+      "reviewer": "EF",
+      "date_labeled": "2026-05-25",
+      "confidence": 0.99
+    },
+    {
+      "name": "fixture:openai_key_in_header",
+      "ecosystem": "file",
+      "source": "file://tests/corpus/malicious/openai_key_in_header",
+      "label": "malicious",
+      "synthetic": true,
+      "rationale": "In-house fixture: official-SDK 'ask' tool that reads OPENAI_API_KEY from env and puts it in an Authorization: Bearer header on httpx.AsyncClient.post. The shape is structurally identical to a textbook exfil channel that v0.1.1 missed. Hand-authored as a regression test for r1 across alias-tracking and async-with shapes. Synthetic flag set.",
+      "reviewer": "EF",
+      "date_labeled": "2026-05-25",
+      "confidence": 0.99
+    },
+    {
+      "name": "fixture:helper_exfil",
+      "ecosystem": "file",
+      "source": "file://tests/corpus/malicious/helper_exfil",
+      "label": "malicious",
+      "synthetic": true,
+      "rationale": "In-house fixture: secret read and net call sit in DIFFERENT helper functions, glued together by the tool body. Hand-authored as a regression test for inter-procedural taint (function summaries, L2 partial closure). Synthetic flag set.",
+      "reviewer": "EF",
+      "date_labeled": "2026-05-25",
+      "confidence": 0.99
+    },
+    {
+      "name": "fixture:runtime_context_exfil",
+      "ecosystem": "file",
+      "source": "file://tests/corpus/malicious/runtime_context_exfil",
+      "label": "suspicious",
+      "synthetic": true,
+      "rationale": "In-house fixture: tool POSTs platform.platform() + socket.gethostname() to attacker URL — the 'modified payload' bypass surfaced by the v0.1.5-full model-compliance eval (alignment-tuned models refuse env exfil and substitute host fingerprint). Labeled SUSPICIOUS, not malicious — fingerprint exfil is a real signal but less severe than credential exfil; r11.fingerprint_to_request verdicts suspicious. Hand-authored as a regression test. Synthetic flag set.",
+      "reviewer": "EF",
+      "date_labeled": "2026-05-25",
+      "confidence": 0.95
     }
   ]
 }

@@ -21,7 +21,20 @@ eval/labeled/
 ├── README.md       (this file)
 ├── labels.json     (the ground truth — append-only, version-controlled)
 ├── run.py          (scans every labeled pkg, compares vs label, writes confusion.md)
-├── bootstrap.py    (ingests eval/results/v0.1.7/ and emits needs_review stubs)
+├── bootstrap.py    (ingests eval/results/v0.1.X/ and emits needs_review stubs)
+├── propose_candidates.py
+│                   (reads the cached LLM-fallback pilot output and emits
+│                    labels_candidates.json — AI-proposed labels at weak
+│                    confidence, queued for human review)
+├── needs_review.json
+│                   (bootstrap output — packages MIS sees but no label exists yet,
+│                    sorted by review priority)
+├── labels_candidates.json
+│                   (AI-proposed labels at confidence ≤ 0.6 — NOT a substitute
+│                    for human-vetted labels.json entries. The user reads each
+│                    candidate, agrees / disagrees, and promotes (with their
+│                    own rationale + initials) to labels.json, deleting the
+│                    candidate entry once promoted.)
 └── results/
     └── v0.1.X/
         ├── confusion.json   (machine-readable)
@@ -101,6 +114,10 @@ Notes:
 
 ## Seed entries (v0.1.7)
 
+5 hand-vetted labels — 1 public-disclosure malicious + 4 Anthropic-monorepo
+benigns. v0.1.13 added 10 more synthetic-labeled entries from the test
+corpus — see "Synthetic fixtures as labels" below.
+
 | name | label | source | reviewer | confidence |
 |---|---|---|---|---|
 | `postmark-mcp` | malicious | npm:postmark-mcp@1.0.16 | EF | 0.99 |
@@ -115,6 +132,56 @@ it). The Anthropic-monorepo entries are widely-installed, source-public, and
 have been reviewed by both the project authors and outside scanners — high
 but not perfect confidence (`benign` is asymptotic; new commits could
 change this — version-pinning is the mitigation).
+
+## Synthetic fixtures as labels (v0.1.13)
+
+Pre-v0.1.13 the corpus had exactly one `malicious` entry — `postmark-mcp@1.0.16`
+— which was YANKED from npm after disclosure, so the harness reported it
+as `error` and recall was effectively undefined. v0.1.13 added the 10
+in-house `tests/corpus/malicious/*` fixtures as `file://` labels with a
+`synthetic: true` flag.
+
+Every synthetic label is honest about what it is — these fixtures were
+hand-authored as regression tests by MIS authors, so labels against them
+measure MIS's *agreement with its own taste*, NOT MIS's recall on
+in-the-wild malware. They are useful as non-zero TP data points for
+detecting regressions, and as a smoke test that the harness end-to-end
+works — but they MUST NOT be cited as evidence that MIS catches real-
+world threats. The `synthetic: true` field on every fixture-derived
+entry exists so reports can split synthetic-vs-in-the-wild and never
+claim general recall from synthetic-only data.
+
+When (if) more in-the-wild malicious MCP packages get publicly
+disclosed, they should be labeled WITHOUT the `synthetic` flag, and
+the cited recall numbers should be split (synthetic recall: high;
+in-the-wild recall: TBD until the corpus grows).
+
+## AI-proposed candidates (labels_candidates.json)
+
+`propose_candidates.py` reads the cached LLM-fallback pilot output and
+emits `labels_candidates.json` — AI-proposed labels for packages MIS-
+unknown'd in v0.1.7 that the LLM-fallback path was able to extract tools
+from. Per the labeling protocol above, AI-only review is weak evidence
+and these proposals MUST NOT enter `labels.json` automatically. The
+candidates file is a review queue: each entry has `ai_confidence` (0.5-
+0.6), `ai_rationale` (what the LLM extracted), `ai_evidence` (the full
+LLM tool / signal list), and `needs_human_review: true`.
+
+Promotion workflow:
+1. Read the AI proposal + evidence.
+2. Open the package source (`pip download` / `npm pack`) and read enough
+   to back the label yourself.
+3. If you agree: write your own rationale (your read of the source, not
+   a copy of the AI rationale), set `confidence` 0.7-0.9, sign with
+   your initials, and append to `labels.json`. Delete the candidate
+   from `labels_candidates.json`.
+4. If you disagree: write a one-line note about why in the candidate
+   and either reduce `ai_confidence` to 0.3 (review-needed flag stays
+   set) or delete the candidate outright if it's clearly wrong.
+
+This separation is the methodological commitment — `labels.json` is
+ground truth, `labels_candidates.json` is a triage queue, AI never
+crosses the line into ground truth without you in the loop.
 
 ## Adding a label
 

@@ -1,0 +1,956 @@
+{
+  "version": 1,
+  "generated_from_pilot": "eval\\llm_fallback\\results\\v0.1.10\\pilot.json",
+  "generated_at": "2026-05-25T12:48:52Z",
+  "n_candidates": 12,
+  "candidates": [
+    {
+      "name": "@21st-dev/magic",
+      "ecosystem": "npm",
+      "source": "npm:@21st-dev/magic",
+      "proposed_label": "benign",
+      "ai_confidence": 0.55,
+      "ai_rationale": "AI proposal from LLM-fallback pilot (v0.1.10). The LLM extracted 4 tool(s) from the package source: 21st_magic_component_builder, 21st_magic_component_inspiration, logo_search, 21st_magic_component_refiner. LLM notes: \"4 tools registered; all make HTTP calls to external APIs (21st.dev, svgl.app); no secret exfil detected\". MIS v0.1.10 classifier verdict on the LLM-extracted signals: benign. AI-proposed label is one severity step below the verdict — `benign` — because AI-only review qualifies as weak evidence per the eval/labeled protocol; the proposal needs human source-reading to promote to labels.json. The full LLM signal extraction per tool is in `ai_evidence` below; the v0.1.7 static-MIS verdict was `unknown`.",
+      "needs_human_review": true,
+      "ai_evidence": {
+        "static_mis_v0.1.7_verdict": "unknown",
+        "llm_classifier_v0.1.10_verdict": "benign",
+        "extracted_tools_count": 4,
+        "extracted_signals_per_tool": [
+          {
+            "tool": "21st_magic_component_builder",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "21st_magic_component_inspiration",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "logo_search",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "21st_magic_component_refiner",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          }
+        ],
+        "llm_extraction_notes": "4 tools registered; all make HTTP calls to external APIs (21st.dev, svgl.app); no secret exfil detected",
+        "source_pilot_run": "eval\\llm_fallback\\results\\v0.1.10\\pilot.json"
+      }
+    },
+    {
+      "name": "@executeautomation/playwright-mcp-server",
+      "ecosystem": "npm",
+      "source": "npm:@executeautomation/playwright-mcp-server",
+      "proposed_label": "benign",
+      "ai_confidence": 0.55,
+      "ai_rationale": "AI proposal from LLM-fallback pilot (v0.1.10). The LLM extracted 33 tool(s) from the package source: start_codegen_session, end_codegen_session, get_codegen_session, clear_codegen_session, playwright_navigate, .... LLM notes: \"Playwright MCP server with browser automation and HTTP request tools. Source truncated at 120k chars.\". MIS v0.1.10 classifier verdict on the LLM-extracted signals: benign. AI-proposed label is one severity step below the verdict — `benign` — because AI-only review qualifies as weak evidence per the eval/labeled protocol; the proposal needs human source-reading to promote to labels.json. The full LLM signal extraction per tool is in `ai_evidence` below; the v0.1.7 static-MIS verdict was `unknown`.",
+      "needs_human_review": true,
+      "ai_evidence": {
+        "static_mis_v0.1.7_verdict": "unknown",
+        "llm_classifier_v0.1.10_verdict": "benign",
+        "extracted_tools_count": 33,
+        "extracted_signals_per_tool": [
+          {
+            "tool": "start_codegen_session",
+            "signals": []
+          },
+          {
+            "tool": "end_codegen_session",
+            "signals": []
+          },
+          {
+            "tool": "get_codegen_session",
+            "signals": []
+          },
+          {
+            "tool": "clear_codegen_session",
+            "signals": []
+          },
+          {
+            "tool": "playwright_navigate",
+            "signals": [
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "playwright_screenshot",
+            "signals": []
+          },
+          {
+            "tool": "playwright_click",
+            "signals": []
+          },
+          {
+            "tool": "playwright_iframe_click",
+            "signals": []
+          },
+          {
+            "tool": "playwright_iframe_fill",
+            "signals": []
+          },
+          {
+            "tool": "playwright_fill",
+            "signals": []
+          },
+          {
+            "tool": "playwright_select",
+            "signals": []
+          },
+          {
+            "tool": "playwright_hover",
+            "signals": []
+          },
+          {
+            "tool": "playwright_upload_file",
+            "signals": []
+          },
+          {
+            "tool": "playwright_evaluate",
+            "signals": [
+              "EXEC_DYNAMIC"
+            ]
+          },
+          {
+            "tool": "playwright_console_logs",
+            "signals": []
+          },
+          {
+            "tool": "playwright_resize",
+            "signals": []
+          },
+          {
+            "tool": "playwright_close",
+            "signals": []
+          },
+          {
+            "tool": "playwright_get",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "playwright_post",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "playwright_put",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "playwright_patch",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "playwright_delete",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "playwright_expect_response",
+            "signals": []
+          },
+          {
+            "tool": "playwright_assert_response",
+            "signals": []
+          },
+          {
+            "tool": "playwright_custom_user_agent",
+            "signals": []
+          },
+          {
+            "tool": "playwright_get_visible_text",
+            "signals": []
+          },
+          {
+            "tool": "playwright_get_visible_html",
+            "signals": []
+          },
+          {
+            "tool": "playwright_go_back",
+            "signals": []
+          },
+          {
+            "tool": "playwright_go_forward",
+            "signals": []
+          },
+          {
+            "tool": "playwright_drag",
+            "signals": []
+          },
+          {
+            "tool": "playwright_press_key",
+            "signals": []
+          },
+          {
+            "tool": "playwright_save_as_pdf",
+            "signals": []
+          },
+          {
+            "tool": "playwright_click_and_switch_tab",
+            "signals": []
+          }
+        ],
+        "llm_extraction_notes": "Playwright MCP server with browser automation and HTTP request tools. Source truncated at 120k chars.",
+        "source_pilot_run": "eval\\llm_fallback\\results\\v0.1.10\\pilot.json"
+      }
+    },
+    {
+      "name": "@modelcontextprotocol/server-aws-kb-retrieval",
+      "ecosystem": "npm",
+      "source": "npm:@modelcontextprotocol/server-aws-kb-retrieval",
+      "proposed_label": "benign",
+      "ai_confidence": 0.55,
+      "ai_rationale": "AI proposal from LLM-fallback pilot (v0.1.10). The LLM extracted 1 tool(s) from the package source: retrieve_from_aws_kb. LLM notes: \"AWS SDK client reads credentials from env vars, makes API calls with user-supplied knowledgeBaseId\". MIS v0.1.10 classifier verdict on the LLM-extracted signals: benign. AI-proposed label is one severity step below the verdict — `benign` — because AI-only review qualifies as weak evidence per the eval/labeled protocol; the proposal needs human source-reading to promote to labels.json. The full LLM signal extraction per tool is in `ai_evidence` below; the v0.1.7 static-MIS verdict was `unknown`.",
+      "needs_human_review": true,
+      "ai_evidence": {
+        "static_mis_v0.1.7_verdict": "unknown",
+        "llm_classifier_v0.1.10_verdict": "benign",
+        "extracted_tools_count": 1,
+        "extracted_signals_per_tool": [
+          {
+            "tool": "retrieve_from_aws_kb",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_FROM_INPUT",
+              "SECRET_ENV_READ"
+            ]
+          }
+        ],
+        "llm_extraction_notes": "AWS SDK client reads credentials from env vars, makes API calls with user-supplied knowledgeBaseId",
+        "source_pilot_run": "eval\\llm_fallback\\results\\v0.1.10\\pilot.json"
+      }
+    },
+    {
+      "name": "@modelcontextprotocol/server-brave-search",
+      "ecosystem": "npm",
+      "source": "npm:@modelcontextprotocol/server-brave-search",
+      "proposed_label": "benign",
+      "ai_confidence": 0.55,
+      "ai_rationale": "AI proposal from LLM-fallback pilot (v0.1.10). The LLM extracted 2 tool(s) from the package source: brave_web_search, brave_local_search. LLM notes: \"Both tools make HTTP requests to Brave API using env var BRAVE_API_KEY in headers; user query flows to URL params\". MIS v0.1.10 classifier verdict on the LLM-extracted signals: benign. AI-proposed label is one severity step below the verdict — `benign` — because AI-only review qualifies as weak evidence per the eval/labeled protocol; the proposal needs human source-reading to promote to labels.json. The full LLM signal extraction per tool is in `ai_evidence` below; the v0.1.7 static-MIS verdict was `unknown`.",
+      "needs_human_review": true,
+      "ai_evidence": {
+        "static_mis_v0.1.7_verdict": "unknown",
+        "llm_classifier_v0.1.10_verdict": "benign",
+        "extracted_tools_count": 2,
+        "extracted_signals_per_tool": [
+          {
+            "tool": "brave_web_search",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT",
+              "SECRET_ENV_READ",
+              "SECRET_IN_REQUEST"
+            ]
+          },
+          {
+            "tool": "brave_local_search",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT",
+              "SECRET_ENV_READ",
+              "SECRET_IN_REQUEST"
+            ]
+          }
+        ],
+        "llm_extraction_notes": "Both tools make HTTP requests to Brave API using env var BRAVE_API_KEY in headers; user query flows to URL params",
+        "source_pilot_run": "eval\\llm_fallback\\results\\v0.1.10\\pilot.json"
+      }
+    },
+    {
+      "name": "@modelcontextprotocol/server-gdrive",
+      "ecosystem": "npm",
+      "source": "npm:@modelcontextprotocol/server-gdrive",
+      "proposed_label": "benign",
+      "ai_confidence": 0.55,
+      "ai_rationale": "AI proposal from LLM-fallback pilot (v0.1.10). The LLM extracted 1 tool(s) from the package source: search. LLM notes: \"Google Drive API client; reads OAuth creds from FS; net calls use googleapis SDK with user input in query\". MIS v0.1.10 classifier verdict on the LLM-extracted signals: benign. AI-proposed label is one severity step below the verdict — `benign` — because AI-only review qualifies as weak evidence per the eval/labeled protocol; the proposal needs human source-reading to promote to labels.json. The full LLM signal extraction per tool is in `ai_evidence` below; the v0.1.7 static-MIS verdict was `unknown`.",
+      "needs_human_review": true,
+      "ai_evidence": {
+        "static_mis_v0.1.7_verdict": "unknown",
+        "llm_classifier_v0.1.10_verdict": "benign",
+        "extracted_tools_count": 1,
+        "extracted_signals_per_tool": [
+          {
+            "tool": "search",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_FROM_INPUT"
+            ]
+          }
+        ],
+        "llm_extraction_notes": "Google Drive API client; reads OAuth creds from FS; net calls use googleapis SDK with user input in query",
+        "source_pilot_run": "eval\\llm_fallback\\results\\v0.1.10\\pilot.json"
+      }
+    },
+    {
+      "name": "@modelcontextprotocol/server-gitlab",
+      "ecosystem": "npm",
+      "source": "npm:@modelcontextprotocol/server-gitlab",
+      "proposed_label": "benign",
+      "ai_confidence": 0.55,
+      "ai_rationale": "AI proposal from LLM-fallback pilot (v0.1.10). The LLM extracted 9 tool(s) from the package source: create_or_update_file, search_repositories, create_repository, get_file_contents, push_files, .... LLM notes: \"GitLab API client. Reads GITLAB_PERSONAL_ACCESS_TOKEN from env, uses it in Authorization headers for all API calls.\". MIS v0.1.10 classifier verdict on the LLM-extracted signals: benign. AI-proposed label is one severity step below the verdict — `benign` — because AI-only review qualifies as weak evidence per the eval/labeled protocol; the proposal needs human source-reading to promote to labels.json. The full LLM signal extraction per tool is in `ai_evidence` below; the v0.1.7 static-MIS verdict was `unknown`.",
+      "needs_human_review": true,
+      "ai_evidence": {
+        "static_mis_v0.1.7_verdict": "unknown",
+        "llm_classifier_v0.1.10_verdict": "benign",
+        "extracted_tools_count": 9,
+        "extracted_signals_per_tool": [
+          {
+            "tool": "create_or_update_file",
+            "signals": [
+              "SECRET_ENV_READ",
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "search_repositories",
+            "signals": [
+              "SECRET_ENV_READ",
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "create_repository",
+            "signals": [
+              "SECRET_ENV_READ",
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "get_file_contents",
+            "signals": [
+              "SECRET_ENV_READ",
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "push_files",
+            "signals": [
+              "SECRET_ENV_READ",
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "create_issue",
+            "signals": [
+              "SECRET_ENV_READ",
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "create_merge_request",
+            "signals": [
+              "SECRET_ENV_READ",
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "fork_repository",
+            "signals": [
+              "SECRET_ENV_READ",
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "create_branch",
+            "signals": [
+              "SECRET_ENV_READ",
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          }
+        ],
+        "llm_extraction_notes": "GitLab API client. Reads GITLAB_PERSONAL_ACCESS_TOKEN from env, uses it in Authorization headers for all API calls.",
+        "source_pilot_run": "eval\\llm_fallback\\results\\v0.1.10\\pilot.json"
+      }
+    },
+    {
+      "name": "@modelcontextprotocol/server-google-maps",
+      "ecosystem": "npm",
+      "source": "npm:@modelcontextprotocol/server-google-maps",
+      "proposed_label": "benign",
+      "ai_confidence": 0.55,
+      "ai_rationale": "AI proposal from LLM-fallback pilot (v0.1.10). The LLM extracted 7 tool(s) from the package source: maps_geocode, maps_reverse_geocode, maps_search_places, maps_place_details, maps_distance_matrix, .... LLM notes: \"Google Maps API wrapper; reads GOOGLE_MAPS_API_KEY from env, sends to googleapis.com with user input\". MIS v0.1.10 classifier verdict on the LLM-extracted signals: benign. AI-proposed label is one severity step below the verdict — `benign` — because AI-only review qualifies as weak evidence per the eval/labeled protocol; the proposal needs human source-reading to promote to labels.json. The full LLM signal extraction per tool is in `ai_evidence` below; the v0.1.7 static-MIS verdict was `unknown`.",
+      "needs_human_review": true,
+      "ai_evidence": {
+        "static_mis_v0.1.7_verdict": "unknown",
+        "llm_classifier_v0.1.10_verdict": "benign",
+        "extracted_tools_count": 7,
+        "extracted_signals_per_tool": [
+          {
+            "tool": "maps_geocode",
+            "signals": [
+              "SECRET_ENV_READ",
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT",
+              "SECRET_IN_REQUEST"
+            ]
+          },
+          {
+            "tool": "maps_reverse_geocode",
+            "signals": [
+              "SECRET_ENV_READ",
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT",
+              "SECRET_IN_REQUEST"
+            ]
+          },
+          {
+            "tool": "maps_search_places",
+            "signals": [
+              "SECRET_ENV_READ",
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT",
+              "SECRET_IN_REQUEST"
+            ]
+          },
+          {
+            "tool": "maps_place_details",
+            "signals": [
+              "SECRET_ENV_READ",
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT",
+              "SECRET_IN_REQUEST"
+            ]
+          },
+          {
+            "tool": "maps_distance_matrix",
+            "signals": [
+              "SECRET_ENV_READ",
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT",
+              "SECRET_IN_REQUEST"
+            ]
+          },
+          {
+            "tool": "maps_elevation",
+            "signals": [
+              "SECRET_ENV_READ",
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT",
+              "SECRET_IN_REQUEST"
+            ]
+          },
+          {
+            "tool": "maps_directions",
+            "signals": [
+              "SECRET_ENV_READ",
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT",
+              "SECRET_IN_REQUEST"
+            ]
+          }
+        ],
+        "llm_extraction_notes": "Google Maps API wrapper; reads GOOGLE_MAPS_API_KEY from env, sends to googleapis.com with user input",
+        "source_pilot_run": "eval\\llm_fallback\\results\\v0.1.10\\pilot.json"
+      }
+    },
+    {
+      "name": "@modelcontextprotocol/server-puppeteer",
+      "ecosystem": "npm",
+      "source": "npm:@modelcontextprotocol/server-puppeteer",
+      "proposed_label": "benign",
+      "ai_confidence": 0.55,
+      "ai_rationale": "AI proposal from LLM-fallback pilot (v0.1.10). The LLM extracted 7 tool(s) from the package source: puppeteer_navigate, puppeteer_screenshot, puppeteer_click, puppeteer_fill, puppeteer_select, .... LLM notes: \"Puppeteer browser automation tools. Navigate uses input URL. Evaluate executes arbitrary JS via page.evaluate.\". MIS v0.1.10 classifier verdict on the LLM-extracted signals: benign. AI-proposed label is one severity step below the verdict — `benign` — because AI-only review qualifies as weak evidence per the eval/labeled protocol; the proposal needs human source-reading to promote to labels.json. The full LLM signal extraction per tool is in `ai_evidence` below; the v0.1.7 static-MIS verdict was `unknown`.",
+      "needs_human_review": true,
+      "ai_evidence": {
+        "static_mis_v0.1.7_verdict": "unknown",
+        "llm_classifier_v0.1.10_verdict": "benign",
+        "extracted_tools_count": 7,
+        "extracted_signals_per_tool": [
+          {
+            "tool": "puppeteer_navigate",
+            "signals": [
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "puppeteer_screenshot",
+            "signals": []
+          },
+          {
+            "tool": "puppeteer_click",
+            "signals": []
+          },
+          {
+            "tool": "puppeteer_fill",
+            "signals": []
+          },
+          {
+            "tool": "puppeteer_select",
+            "signals": []
+          },
+          {
+            "tool": "puppeteer_hover",
+            "signals": []
+          },
+          {
+            "tool": "puppeteer_evaluate",
+            "signals": [
+              "EXEC_DYNAMIC"
+            ]
+          }
+        ],
+        "llm_extraction_notes": "Puppeteer browser automation tools. Navigate uses input URL. Evaluate executes arbitrary JS via page.evaluate.",
+        "source_pilot_run": "eval\\llm_fallback\\results\\v0.1.10\\pilot.json"
+      }
+    },
+    {
+      "name": "@modelcontextprotocol/server-slack",
+      "ecosystem": "npm",
+      "source": "npm:@modelcontextprotocol/server-slack",
+      "proposed_label": "benign",
+      "ai_confidence": 0.55,
+      "ai_rationale": "AI proposal from LLM-fallback pilot (v0.1.10). The LLM extracted 8 tool(s) from the package source: slack_list_channels, slack_post_message, slack_reply_to_thread, slack_add_reaction, slack_get_channel_history, .... LLM notes: \"Slack API client; reads SLACK_BOT_TOKEN, SLACK_TEAM_ID, SLACK_CHANNEL_IDS from env; all tools make fetch calls to slack.\". MIS v0.1.10 classifier verdict on the LLM-extracted signals: benign. AI-proposed label is one severity step below the verdict — `benign` — because AI-only review qualifies as weak evidence per the eval/labeled protocol; the proposal needs human source-reading to promote to labels.json. The full LLM signal extraction per tool is in `ai_evidence` below; the v0.1.7 static-MIS verdict was `unknown`.",
+      "needs_human_review": true,
+      "ai_evidence": {
+        "static_mis_v0.1.7_verdict": "unknown",
+        "llm_classifier_v0.1.10_verdict": "benign",
+        "extracted_tools_count": 8,
+        "extracted_signals_per_tool": [
+          {
+            "tool": "slack_list_channels",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "SECRET_ENV_READ"
+            ]
+          },
+          {
+            "tool": "slack_post_message",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "slack_reply_to_thread",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "slack_add_reaction",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "slack_get_channel_history",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "slack_get_thread_replies",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "slack_get_users",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "SECRET_ENV_READ"
+            ]
+          },
+          {
+            "tool": "slack_get_user_profile",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          }
+        ],
+        "llm_extraction_notes": "Slack API client; reads SLACK_BOT_TOKEN, SLACK_TEAM_ID, SLACK_CHANNEL_IDS from env; all tools make fetch calls to slack.",
+        "source_pilot_run": "eval\\llm_fallback\\results\\v0.1.10\\pilot.json"
+      }
+    },
+    {
+      "name": "mcp-figma",
+      "ecosystem": "npm",
+      "source": "npm:mcp-figma",
+      "proposed_label": "benign",
+      "ai_confidence": 0.55,
+      "ai_rationale": "AI proposal from LLM-fallback pilot (v0.1.10). The LLM extracted 18 tool(s) from the package source: set_api_key, check_api_key, get_file, get_file_nodes, get_image, .... LLM notes: \"Figma API client. All tools use axios to call api.figma.com with user-provided API key and input params.\". MIS v0.1.10 classifier verdict on the LLM-extracted signals: benign. AI-proposed label is one severity step below the verdict — `benign` — because AI-only review qualifies as weak evidence per the eval/labeled protocol; the proposal needs human source-reading to promote to labels.json. The full LLM signal extraction per tool is in `ai_evidence` below; the v0.1.7 static-MIS verdict was `unknown`.",
+      "needs_human_review": true,
+      "ai_evidence": {
+        "static_mis_v0.1.7_verdict": "unknown",
+        "llm_classifier_v0.1.10_verdict": "benign",
+        "extracted_tools_count": 18,
+        "extracted_signals_per_tool": [
+          {
+            "tool": "set_api_key",
+            "signals": []
+          },
+          {
+            "tool": "check_api_key",
+            "signals": []
+          },
+          {
+            "tool": "get_file",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "get_file_nodes",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "get_image",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "get_image_fills",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "get_comments",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "post_comment",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "delete_comment",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "get_team_projects",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "get_project_files",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "get_team_components",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "get_file_components",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "get_component",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "get_team_component_sets",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "get_team_styles",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "get_file_styles",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          },
+          {
+            "tool": "get_style",
+            "signals": [
+              "NET_HTTP_OUTBOUND",
+              "NET_HOST_LITERAL",
+              "NET_HOST_FROM_INPUT"
+            ]
+          }
+        ],
+        "llm_extraction_notes": "Figma API client. All tools use axios to call api.figma.com with user-provided API key and input params.",
+        "source_pilot_run": "eval\\llm_fallback\\results\\v0.1.10\\pilot.json"
+      }
+    },
+    {
+      "name": "mcp-server-commands",
+      "ecosystem": "npm",
+      "source": "npm:mcp-server-commands",
+      "proposed_label": "benign",
+      "ai_confidence": 0.55,
+      "ai_rationale": "AI proposal from LLM-fallback pilot (v0.1.10). The LLM extracted 1 tool(s) from the package source: run_process. LLM notes: \"Tool spawns child processes via node:child_process.spawn; shell mode and executable mode both present; stdin_text flows\". MIS v0.1.10 classifier verdict on the LLM-extracted signals: benign. AI-proposed label is one severity step below the verdict — `benign` — because AI-only review qualifies as weak evidence per the eval/labeled protocol; the proposal needs human source-reading to promote to labels.json. The full LLM signal extraction per tool is in `ai_evidence` below; the v0.1.7 static-MIS verdict was `unknown`.",
+      "needs_human_review": true,
+      "ai_evidence": {
+        "static_mis_v0.1.7_verdict": "unknown",
+        "llm_classifier_v0.1.10_verdict": "benign",
+        "extracted_tools_count": 1,
+        "extracted_signals_per_tool": [
+          {
+            "tool": "run_process",
+            "signals": [
+              "EXEC_SHELL",
+              "EXEC_SHELL_WITH_INPUT"
+            ]
+          }
+        ],
+        "llm_extraction_notes": "Tool spawns child processes via node:child_process.spawn; shell mode and executable mode both present; stdin_text flows ",
+        "source_pilot_run": "eval\\llm_fallback\\results\\v0.1.10\\pilot.json"
+      }
+    },
+    {
+      "name": "mcp-server-kubernetes",
+      "ecosystem": "npm",
+      "source": "npm:mcp-server-kubernetes",
+      "proposed_label": "benign",
+      "ai_confidence": 0.55,
+      "ai_rationale": "AI proposal from LLM-fallback pilot (v0.1.10). The LLM extracted 23 tool(s) from the package source: cleanup, kubectl_get, kubectl_describe, kubectl_apply, kubectl_delete, .... LLM notes: \"Kubernetes MCP server with kubectl/helm wrappers; shell exec via execFileSync with user input\". MIS v0.1.10 classifier verdict on the LLM-extracted signals: benign. AI-proposed label is one severity step below the verdict — `benign` — because AI-only review qualifies as weak evidence per the eval/labeled protocol; the proposal needs human source-reading to promote to labels.json. The full LLM signal extraction per tool is in `ai_evidence` below; the v0.1.7 static-MIS verdict was `unknown`.",
+      "needs_human_review": true,
+      "ai_evidence": {
+        "static_mis_v0.1.7_verdict": "unknown",
+        "llm_classifier_v0.1.10_verdict": "benign",
+        "extracted_tools_count": 23,
+        "extracted_signals_per_tool": [
+          {
+            "tool": "cleanup",
+            "signals": []
+          },
+          {
+            "tool": "kubectl_get",
+            "signals": [
+              "EXEC_SHELL"
+            ]
+          },
+          {
+            "tool": "kubectl_describe",
+            "signals": [
+              "EXEC_SHELL"
+            ]
+          },
+          {
+            "tool": "kubectl_apply",
+            "signals": [
+              "EXEC_SHELL"
+            ]
+          },
+          {
+            "tool": "kubectl_delete",
+            "signals": [
+              "EXEC_SHELL"
+            ]
+          },
+          {
+            "tool": "kubectl_create",
+            "signals": [
+              "EXEC_SHELL"
+            ]
+          },
+          {
+            "tool": "kubectl_logs",
+            "signals": [
+              "EXEC_SHELL"
+            ]
+          },
+          {
+            "tool": "kubectl_scale",
+            "signals": [
+              "EXEC_SHELL"
+            ]
+          },
+          {
+            "tool": "kubectl_patch",
+            "signals": [
+              "EXEC_SHELL"
+            ]
+          },
+          {
+            "tool": "kubectl_rollout",
+            "signals": [
+              "EXEC_SHELL"
+            ]
+          },
+          {
+            "tool": "kubectl_context",
+            "signals": [
+              "EXEC_SHELL"
+            ]
+          },
+          {
+            "tool": "kubectl_reconnect",
+            "signals": []
+          },
+          {
+            "tool": "explain_resource",
+            "signals": []
+          },
+          {
+            "tool": "install_helm_chart",
+            "signals": [
+              "EXEC_SHELL"
+            ]
+          },
+          {
+            "tool": "upgrade_helm_chart",
+            "signals": [
+              "EXEC_SHELL"
+            ]
+          },
+          {
+            "tool": "uninstall_helm_chart",
+            "signals": [
+              "EXEC_SHELL"
+            ]
+          },
+          {
+            "tool": "node_management",
+            "signals": []
+          },
+          {
+            "tool": "port_forward",
+            "signals": []
+          },
+          {
+            "tool": "stop_port_forward",
+            "signals": []
+          },
+          {
+            "tool": "exec_in_pod",
+            "signals": [
+              "EXEC_SHELL",
+              "EXEC_SHELL_WITH_INPUT"
+            ]
+          },
+          {
+            "tool": "list_api_resources",
+            "signals": []
+          },
+          {
+            "tool": "kubectl_generic",
+            "signals": [
+              "EXEC_SHELL",
+              "EXEC_SHELL_WITH_INPUT"
+            ]
+          },
+          {
+            "tool": "ping",
+            "signals": []
+          }
+        ],
+        "llm_extraction_notes": "Kubernetes MCP server with kubectl/helm wrappers; shell exec via execFileSync with user input",
+        "source_pilot_run": "eval\\llm_fallback\\results\\v0.1.10\\pilot.json"
+      }
+    }
+  ]
+}

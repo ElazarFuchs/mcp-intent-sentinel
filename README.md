@@ -1,5 +1,17 @@
 # MCP Intent Sentinel
 
+> **v0.1.14 — corpus side of the v0.1.13 critique (L20 / L21 partial
+> closure).** No `mis/` changes — labels.json grew from 5 to 15 entries:
+> 10 in-house `tests/corpus/malicious/*` fixtures added as `file://`
+> labels with `synthetic: true` (honest about being MIS-authored
+> regression tests, NOT in-the-wild captures — reports MUST split
+> synthetic-vs-in-the-wild recall). New `propose_candidates.py` emits
+> `labels_candidates.json` from the cached LLM-fallback pilot — 12 AI-
+> proposed labels at `ai_confidence` 0.5-0.6, queued for human review
+> per the labeling protocol (AI proposals CANNOT enter `labels.json`
+> automatically). Confusion at v0.1.14 — 9 TP, 1 TN, 3 coverage-gap,
+> 1 error, 1 TP-suspicious.
+
 > **v0.1.13 — host-claim partition for r1 (L23 deep closure).** The
 > classifier now reads the package's manifest (`package.json` /
 > `pyproject.toml`) and partitions r1's secret-to-request findings by
@@ -294,7 +306,7 @@ tests/                  # 82 unit + integration tests, 24 fixtures
 | `mcp-trust` | Sigstore-style trust + runtime proxy | v0.1-alpha |
 | `arsp` | Runtime security plane: capability tokens, IFC, output sealing | research |
 | `agent-config-injection` | Workspace config-file injection scanner (`.cursorrules`, `mcp.json`) | v0.1.8 |
-| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.13 |
+| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.14 |
 
 The composition story: `agent-config-injection` scans config files in a
 workspace, `mcp-intent-sentinel` scans the server source before install,
