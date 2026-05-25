@@ -40,21 +40,20 @@ import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# Whitelist of behavior signal names the LLM is allowed to emit. MUST match
-# entries in mis.analyzers.types.BehaviorSignal — any name outside this set
-# is dropped by the parser. Closed-set output protects the classifier from
-# the LLM inventing signals.
-_VALID_SIGNALS = frozenset({
-    "NET_HTTP_OUTBOUND", "NET_HOST_LITERAL", "NET_HOST_FROM_INPUT", "NET_ON_IMPORT",
-    "SECRET_ENV_READ", "SECRET_FS_READ", "SECRET_IN_REQUEST",
-    "RETURNS_SECRET", "NET_CLIENT_SECRET_STATE",
-    "HOST_FINGERPRINT_READ", "HOST_FINGERPRINT_IN_REQUEST",
-    "EXEC_SHELL", "EXEC_SHELL_WITH_INPUT", "EXEC_DYNAMIC",
-    "DESC_HIDDEN_INSTRUCTION", "DESC_UNICODE_STEG",
-    "DESC_SHADOWS_OTHER_TOOL", "DESC_AUTH_OVERRIDE",
-    "LIFECYCLE_HOOK_NET", "LIFECYCLE_HOOK_EXEC",
-    "TYPOSQUAT_NAME", "SUSPICIOUS_DEPENDENCY",
-})
+from mis.analyzers.types import BehaviorSignal
+
+# Whitelist of behavior signal names the LLM is allowed to emit. Derived
+# directly from the BehaviorSignal enum so that adding a new signal to the
+# enum is automatically picked up here — no manual sync, no silent drift
+# (pre-v0.1.11 this was a hardcoded frozenset; a contributor adding a new
+# enum member without updating the duplicate would have had it silently
+# dropped by the LLM-fallback parser). The closed set continues to protect
+# the classifier from the LLM inventing signals outside the enum.
+#
+# PURE_COMPUTE is excluded — it's a coverage marker the static analyzer
+# sets when it walked a body and saw no I/O; the LLM doesn't have access
+# to that walking step's outcome, so it can't honestly claim it.
+_VALID_SIGNALS = frozenset(s.name for s in BehaviorSignal) - {"PURE_COMPUTE"}
 
 
 SYSTEM_PROMPT = """You are a code structure extractor for the MCP Intent Sentinel security scanner.

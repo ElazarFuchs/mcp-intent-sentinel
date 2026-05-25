@@ -1,4 +1,35 @@
-# LIMITATIONS — v0.1.10
+# LIMITATIONS — v0.1.11
+
+## Changes since v0.1.10
+
+Two small but structural cleanups in response to a v0.1.10 reviewer
+critique:
+
+**Fix A — L24 closed properly (was: fixture worked around the bug).**
+The v0.1.10 fixture `legit_file_role_reads_ssh_config` bound the
+`read_text()` result to `contents` before returning, because the body
+walker only checked `_reads_sensitive_path` in `visit_Assign` — the
+direct-return form escaped detection entirely. v0.1.11 added the same
+check in `visit_Call`, so `return Path("~/.ssh/config").read_text()` and
+similar return / argument-position reads now correctly emit
+SECRET_FS_READ + the `py.secret.fs_read` finding. The fixture has been
+reverted to the natural direct-return form. The meta-issue this closed:
+the v0.1.10 regression test was exercising r4's role exemption only
+under a shape that didn't trigger SECRET_FS_READ — so it was passing
+trivially. Post-v0.1.11 the fixture both triggers SECRET_FS_READ
+(static analyzer sees the read) AND has r4 correctly exempt it (intent
+= file). 80/80 tests still pass.
+
+**Fix B — `_VALID_SIGNALS` derived from the enum.**
+`eval/llm_fallback/analyzer.py:_VALID_SIGNALS` was a hardcoded frozenset
+that duplicated the names in `mis.analyzers.types.BehaviorSignal`. A
+contributor adding a new signal to the enum without also editing the
+analyzer would have had it silently dropped by the LLM-fallback parser
+— no warning, no test failure (closed-set membership is the validation,
+so a missing entry just drops it on the floor). v0.1.11 derives the set
+from `BehaviorSignal` directly (`frozenset(s.name for s in BehaviorSignal)`)
+minus `PURE_COMPUTE` (which is a static-analyzer coverage marker the LLM
+can't honestly claim). Drift class eliminated.
 
 ## Changes since v0.1.9
 

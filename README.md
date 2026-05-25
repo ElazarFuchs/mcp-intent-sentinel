@@ -1,5 +1,14 @@
 # MCP Intent Sentinel
 
+> **v0.1.11 — two structural cleanups from a v0.1.10 reviewer critique.**
+> `_reads_sensitive_path` is now also checked in `visit_Call`, so
+> `return path.read_text()` shapes no longer escape SECRET_FS_READ
+> detection (closes L24 properly — the v0.1.10 fixture had been working
+> around the bug rather than triggering the fix it claimed to test).
+> `_VALID_SIGNALS` in the LLM-fallback analyzer is now derived from the
+> `BehaviorSignal` enum directly, removing the silent-drift footgun where
+> a new enum member would be dropped by the parser. 80/80 tests pass.
+
 > **v0.1.10 — L23 closure (the v0.1.9 pilot's r4 FPs).** Three changes
 > together close every malicious / suspicious FP the LLM-fallback pilot
 > surfaced on real packages: `_guess_intent` now routes API-client and
@@ -256,7 +265,7 @@ tests/                  # 80 unit + integration tests, 22 fixtures
 | `mcp-trust` | Sigstore-style trust + runtime proxy | v0.1-alpha |
 | `arsp` | Runtime security plane: capability tokens, IFC, output sealing | research |
 | `agent-config-injection` | Workspace config-file injection scanner (`.cursorrules`, `mcp.json`) | v0.1.8 |
-| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.10 |
+| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.11 |
 
 The composition story: `agent-config-injection` scans config files in a
 workspace, `mcp-intent-sentinel` scans the server source before install,

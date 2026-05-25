@@ -22,9 +22,4 @@ mcp = FastMCP("ssh-config-reader")
 def read_ssh_config(host: str) -> str:
     """Read SSH configuration for a host from the user's ~/.ssh/config file."""
     config_path = Path.home() / ".ssh" / "config"
-    # Note: the read is assigned to a variable rather than returned directly
-    # because the v0.1.x body walker only checks _reads_sensitive_path in
-    # visit_Assign, not in visit_Return. Tracked as part of L18/L23 — the
-    # return-form path read is silently uncovered today.
-    contents = config_path.read_text()
-    return contents
+    return config_path.read_text()

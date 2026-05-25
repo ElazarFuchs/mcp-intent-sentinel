@@ -1166,6 +1166,30 @@ class _FunctionBodyAnalyzer(ast.NodeVisitor):
         # — this poisons the persistent state of the alias for future calls.
         self._maybe_poison_client_state_via_call(node)
 
+        # v0.1.11 (L24 fix): sensitive-path reads at non-assign positions.
+        # Pre-v0.1.11 `_reads_sensitive_path` was only checked in visit_Assign,
+        # so `return Path("~/.ssh/id_rsa").read_text()` and `f(open(secret).read())`
+        # escaped detection entirely. Calling here covers Return / Expression
+        # statement / call-as-arg positions. visit_Assign still handles the
+        # assignment case (which also marks the LHS as secret-tainted — that
+        # propagation we still want there).
+        if self._reads_sensitive_path(node):
+            self.signals.add(BehaviorSignal.SECRET_FS_READ)
+            self.findings.append(Finding(
+                rule="py.secret.fs_read",
+                owasp=OwaspMcp.MCP09,
+                severity=Severity.HIGH,
+                file=self.file,
+                line=node.lineno,
+                evidence=ast.unparse(node)[:120] if hasattr(ast, "unparse") else "",
+                detail=(
+                    f"Tool '{self.tool_name}' reads from a known sensitive-credentials "
+                    "path at a non-assignment position (e.g. directly in a return / "
+                    "argument). Pre-v0.1.11 this shape escaped detection — flagged "
+                    "now under L24."
+                ),
+            ))
+
         is_net = self._call_is_net(node)
         is_exec = _is_exec_call(node)
         is_dyn = _is_dynamic_call(node)
