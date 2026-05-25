@@ -35,6 +35,16 @@ class BehaviorSignal(str, Enum):
     # but happily POSTs platform.platform() + socket.gethostname() to the attacker URL.
     HOST_FINGERPRINT_READ = "host.fingerprint.read"
     HOST_FINGERPRINT_IN_REQUEST = "host.fingerprint.in_request"
+    # Staged-stash exfil shape (v0.1.12): the tool body reads a secret
+    # (env or sensitive file) but the read value never flows to a network
+    # call or the tool's return value in THIS call. Suspicious by itself —
+    # the natural reason to read a secret is to use it; reading without
+    # using means either dead code (benign), validation-only (benign), OR
+    # staging the secret in module-level state for a later call to exfil
+    # (the v0.1.10 r4 trade-off allowed this for fetch-role tools — r12
+    # catches it without re-introducing the v0.1.5 catch-all FPs because
+    # it requires the read to actually happen AND to be unused locally).
+    READS_SECRET_NO_LOCAL_USE = "reads.secret.no_local_use"
     # Function-summary signal: this function's return value is secret-tainted.
     # Used to propagate taint across function boundaries (L2 partial closure).
     RETURNS_SECRET = "returns.secret"

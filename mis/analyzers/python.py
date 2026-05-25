@@ -386,6 +386,7 @@ class _FileAnalyzer(ast.NodeVisitor):
                 body_walker.visit(stmt)
             profile.behavior.update(body_walker.signals)
             self.findings.extend(body_walker.findings)
+            self._post_hoc_staged_stash(profile.behavior, body_walker, node.lineno)
             # Coverage marker. Tag PURE_COMPUTE iff we walked the body AND
             # didn't see ANY unclassified call. The unknown-call check is
             # what stops `_fetcher.fetch(arguments["url"])` (class-method
@@ -407,6 +408,71 @@ class _FileAnalyzer(ast.NodeVisitor):
             evidence = _src_line(self.source, node.lineno)
             self._top_level_net.append((node.lineno, evidence))
         self.generic_visit(node)
+
+    def _post_hoc_staged_stash(self, behavior: set, walker, line: int) -> None:
+        """v0.1.12 — staged-stash detection.
+
+        When a tool body reads a secret (SECRET_FS_READ or SECRET_ENV_READ)
+        but the read result is NOT used inside this call body — no
+        SECRET_IN_REQUEST (not sent), no RETURNS_SECRET (not returned),
+        no NET_CLIENT_SECRET_STATE (not poisoning a persistent client) —
+        emit READS_SECRET_NO_LOCAL_USE. r12.staged_stash escalates this
+        to `suspicious`.
+
+        Why: the v0.1.10 r4 trade-off explicitly allowed `fetch`-intent
+        tools to read secrets without firing r4 (the FP class on legit
+        API clients). That created a gap: a hostile fetch-tool that
+        reads SSH in call N and stashes it in module-level state for
+        call N+1's exfil would now slip every rule. r12 catches this
+        without re-introducing the v0.1.5 catch-all FPs because:
+
+        - It requires the read to actually happen (signal must be set),
+          AND
+        - It requires the read to be UNUSED locally (so an API client
+          legitimately using `Bearer {api_key}` still emits
+          SECRET_IN_REQUEST and doesn't trip r12), AND
+        - It's `suspicious`-grade, not `malicious` — read-without-use
+          has legitimate uses (validation-only / dead code / debugging).
+
+        Mitigation against the corresponding FP: a tool that reads env
+        to e.g. log a config value (not exfil, not Bearer) would trip
+        this. That's an acceptable surface — those tools should declare
+        themselves credential helpers (description keyword exemption is
+        future work in r12 — see L25 placeholder).
+        """
+        reads_secret = (
+            BehaviorSignal.SECRET_FS_READ in behavior
+            or BehaviorSignal.SECRET_ENV_READ in behavior
+        )
+        if not reads_secret:
+            return
+        used_locally = any(s in behavior for s in (
+            BehaviorSignal.SECRET_IN_REQUEST,
+            BehaviorSignal.RETURNS_SECRET,
+            BehaviorSignal.NET_CLIENT_SECRET_STATE,
+        ))
+        if used_locally:
+            return
+        behavior.add(BehaviorSignal.READS_SECRET_NO_LOCAL_USE)
+        # Emit a finding so r12 has something to consume by rule name and
+        # so the report explains the verdict.
+        self.findings.append(Finding(
+            rule="py.staged_stash.read_no_use",
+            owasp=OwaspMcp.MCP09,
+            severity=Severity.MED,
+            file=self.file,
+            line=line,
+            evidence=f"tool reads secret (env / sensitive file) but the value is not sent / returned in this call",
+            detail=(
+                "The tool body reads a secret (env var or sensitive file) but the "
+                "read value is not used inside this call body — not sent to a network, "
+                "not returned, not stored in a client's persistent state. This is the "
+                "staged-stash exfil shape: read in call N, send in call N+1 from "
+                "module-level state. The v0.1.10 r4 role-aware exemption allowed "
+                "fetch/file-role tools to read secrets without firing r4; r12 catches "
+                "the read-without-use case the exemption opened up."
+            ),
+        ))
 
     def _collect_module_secrets(self, module_node: ast.Module) -> None:
         """Pass-0: collect top-level `NAME = <secret-source>` bindings.
@@ -549,11 +615,13 @@ class _FileAnalyzer(ast.NodeVisitor):
                     branch_walker.visit(stmt)
                 profile.behavior.update(branch_walker.signals)
                 self.findings.extend(branch_walker.findings)
+                self._post_hoc_staged_stash(profile.behavior, branch_walker, profile.line)
             else:
                 # Fallback: apply coarse signals to every tool's behavior set,
                 # but ATTRIBUTE the underlying findings to the handler (not the tool)
                 # so we don't emit N copies of the same finding.
                 profile.behavior.update(coarse_signals)
+                self._post_hoc_staged_stash(profile.behavior, None, profile.line)
             # Coverage marker (same logic as FastMCP path): tag PURE_COMPUTE
             # only if we examined a per-tool branch AND saw no unknown calls.
             # If the branch path wasn't found, we don't make a coverage claim.
@@ -861,6 +929,15 @@ class _FunctionBodyAnalyzer(ast.NodeVisitor):
         # Determine RHS taint, then propagate to LHS names
         secret = self._is_secret_expr(node.value)
         inputy = self._is_input_expr(node.value)
+
+        # v0.1.12: emit SECRET_ENV_READ when the RHS reads os.environ /
+        # os.getenv / etc. The signal was defined in BehaviorSignal but
+        # never emitted by the Python analyzer pre-v0.1.12; only the JS
+        # path emitted it. Without an observable env-read signal, the
+        # post-hoc staged-stash check (r12) can't catch `key = os.environ
+        # [X]` reads that are never used in the call body.
+        if node.value is not None and _is_env_read(node.value):
+            self.signals.add(BehaviorSignal.SECRET_ENV_READ)
 
         # Path-taint propagation: `ssh_dir = Path.home() / ".ssh" / "id_rsa"`
         # marks ssh_dir as a sensitive-path-rich name so that a later
@@ -1374,6 +1451,16 @@ class _FunctionBodyAnalyzer(ast.NodeVisitor):
             return True
         # dict(os.environ) / list(os.environ.items()) / os.environ.items()
         if isinstance(expr, ast.Call) and _is_env_iter(expr):
+            return True
+        # v0.1.12: reading from a sensitive-path expression returns a secret
+        # value. Pre-v0.1.12 this was only inferred via visit_Assign's LHS
+        # taint propagation, so `return path.read_text()` (no LHS) didn't
+        # flow secret-taint into the Return check. Now `_is_secret_expr` on
+        # a sensitive-path read directly returns True, letting visit_Return
+        # emit RETURNS_SECRET on the natural shape — and keeping r12 from
+        # firing on legit file-role tools that DO consume the read locally
+        # (the read flows out via the return value, that's "used locally").
+        if isinstance(expr, ast.Call) and self._reads_sensitive_path(expr):
             return True
         # Name reference to a previously-tainted variable
         if isinstance(expr, ast.Name):

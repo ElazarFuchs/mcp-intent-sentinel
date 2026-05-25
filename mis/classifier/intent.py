@@ -364,6 +364,40 @@ def _r9_net_on_import(findings: list[Finding], _tools) -> Optional[RuleHit]:
     )
 
 
+def _r12_staged_stash(findings: list[Finding], _tools) -> Optional[RuleHit]:
+    """Tool reads a secret (env or sensitive file) but the value is not
+    used in this call body — possible staged-stash exfil.
+
+    The v0.1.10 r4 role-aware exemption opened a deliberate gap: a
+    fetch-intent tool that reads ~/.ssh without sending it via network
+    in the same call no longer trips r4. r12 closes that gap by emitting
+    READS_SECRET_NO_LOCAL_USE when the analyzer sees a secret read with
+    no co-occurring SECRET_IN_REQUEST / RETURNS_SECRET / NET_CLIENT_
+    SECRET_STATE — i.e. the tool read but did not use locally.
+
+    Verdict `suspicious` (not `malicious`): read-without-use has
+    legitimate cases (validation-only / dead code / debug logging). The
+    intent is to surface the shape for review, not to block it.
+    """
+    hits = [f for f in findings if f.rule == "py.staged_stash.read_no_use"]
+    if not hits:
+        return None
+    return RuleHit(
+        rule_id="r12.staged_stash",
+        verdict="suspicious",
+        confidence=0.6,
+        reason=(
+            f"{len(hits)} tool body(ies) read a secret (env var or sensitive file) "
+            "but the read value is not sent to a network / returned / stored in a "
+            "client's persistent state inside the same call. This is the "
+            "staged-stash exfil shape: read in call N, send in call N+1. The "
+            "v0.1.10 r4 role-aware exemption explicitly allowed file/shell/fetch-"
+            "intent tools to read secrets without firing r4; r12 catches the "
+            "read-without-use case that exemption opened."
+        ),
+    )
+
+
 def _r11_fingerprint_to_request(findings: list[Finding], _tools) -> Optional[RuleHit]:
     """Host-fingerprint data (platform.* / socket.gethostname / os.uname) flows
     into an outbound network call. Added v0.1.6 after the model-compliance eval:
@@ -403,6 +437,7 @@ _RULES: list[tuple[str, IntentRule]] = [
     ("r8.dynamic_exec",      _r8_dynamic_exec),
     ("r9.net_on_import",     _r9_net_on_import),
     ("r11.fingerprint_to_request", _r11_fingerprint_to_request),
+    ("r12.staged_stash",            _r12_staged_stash),
 ]
 
 

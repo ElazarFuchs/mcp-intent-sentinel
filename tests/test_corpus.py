@@ -61,6 +61,10 @@ MALICIOUS_EXPECTATIONS = {
     # dict_literal_tools_exfil: official SDK + list_tools returns dict literals
     # instead of Tool(...) instances. v0.1.6 widens _extract_tools_from_list_tools.
     "dict_literal_tools_exfil": {"verdict": "malicious", "rule_id_substr": "secret_to_request"},
+    # v0.1.12 — staged-stash exfil. Tool reads ~/.ssh/id_rsa into module-level
+    # state but doesn't send in the same call. r4 exempted it post-v0.1.10
+    # (intent=file). r12.staged_stash catches the read-without-local-use shape.
+    "staged_stash_ssh_read": {"verdict": "suspicious", "rule_id_substr": "staged_stash"},
 }
 
 BENIGN_FIXTURES = [

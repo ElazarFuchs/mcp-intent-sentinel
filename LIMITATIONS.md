@@ -1,4 +1,60 @@
-# LIMITATIONS — v0.1.11
+# LIMITATIONS — v0.1.12
+
+## Changes since v0.1.11
+
+v0.1.12 closes the staged-stash gap the v0.1.10 r4 trade-off opened.
+
+The v0.1.10 r4 role-aware exemption deliberately allowed `file`/`shell`/
+`fetch`-intent tools to read secrets without firing r4 (the FP class on
+legit file servers / API clients). A side effect: a hostile fetch-tool
+that READ a secret in call N but STASHED it in module-level state for
+exfil in call N+1 escaped every rule.
+
+v0.1.12 ships the catch:
+
+**New BehaviorSignal: `READS_SECRET_NO_LOCAL_USE`.** Emitted post-hoc
+after the body walker finishes if the tool body:
+- has `SECRET_FS_READ` or `SECRET_ENV_READ` (a real read happened), AND
+- has NO `SECRET_IN_REQUEST` (not sent), AND
+- has NO `RETURNS_SECRET` (not returned), AND
+- has NO `NET_CLIENT_SECRET_STATE` (not poisoning a persistent client).
+
+The post-hoc check runs in all three body-analysis paths (FastMCP,
+official-SDK per-tool branch, official-SDK coarse fallback).
+
+**SECRET_ENV_READ now actually emitted** by the Python body walker (was
+only emitted by the JS analyzer pre-v0.1.12; the signal name existed in
+the enum but the Python path never set it). Without this the staged-
+stash check couldn't catch `KEY = os.environ[X]` reads with no local
+use. No regression on the existing env-reading malicious fixtures —
+they all already trip `SECRET_IN_REQUEST` via r1 before r12 considers.
+
+**New classifier rule `r12.staged_stash`.** Verdict `suspicious` (NOT
+malicious). Read-without-local-use has legitimate cases — validation,
+dead code, debug logging — and the goal is to surface the shape for
+review, not to block it. Confidence 0.6.
+
+**Knock-on fix in `_is_secret_expr`.** A direct-return `return path.
+read_text()` previously didn't propagate secret-taint to the Return
+check (only the Assign form did). v0.1.12 adds an `_is_secret_expr`
+branch that returns True for `Call` nodes that read a sensitive path
+— so the legit file-role fixture (which DOES use the read locally by
+returning it) correctly emits `RETURNS_SECRET` and is correctly NOT
+flagged by r12.
+
+**New regression fixture:**
+`tests/corpus/malicious/staged_stash_ssh_read` — a tool that reads
+`~/.ssh/id_rsa` into module-level state but does NOT send / return it
+in the same call. Expects verdict `suspicious` via `r12.staged_stash`.
+Tests 80 -> 81.
+
+**L25 (placeholder)** — r12 has no role-aware exemption. A tool whose
+purpose IS to validate that a secret exists ("`check_api_key` reads
+OPENAI_API_KEY, returns ok/error") would currently trip r12 because
+the read isn't sent. A description-keyword exemption (`validate|check|
+exists|present`) is the obvious fix; v0.1.12 ships without it on the
+theory that validation-only tools are rare enough that catching a few
+as suspicious is the lower-cost direction (re-tighten in v0.1.13+).
 
 ## Changes since v0.1.10
 

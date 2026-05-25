@@ -1,5 +1,19 @@
 # MCP Intent Sentinel
 
+> **v0.1.12 — staged-stash detection (r12).** Closes the gap the v0.1.10
+> r4 trade-off opened: a hostile `fetch`-intent tool that reads a secret
+> in call N but stashes it in module-level state for exfil in call N+1
+> previously slipped every rule. v0.1.12 adds a post-hoc check —
+> `READS_SECRET_NO_LOCAL_USE` fires when a tool body has SECRET_FS_READ
+> or SECRET_ENV_READ with no co-occurring SECRET_IN_REQUEST /
+> RETURNS_SECRET / NET_CLIENT_SECRET_STATE. New classifier rule
+> `r12.staged_stash` verdicts `suspicious` (not malicious — the shape
+> has legitimate uses like validation-only / dead code). Knock-on fix:
+> `_is_secret_expr` now recognizes sensitive-path reads as secret-
+> producing, so `return path.read_text()` correctly emits RETURNS_SECRET
+> and doesn't trip r12 on legit file-role tools. New fixture
+> `staged_stash_ssh_read`; tests 80→81.
+
 > **v0.1.11 — two structural cleanups from a v0.1.10 reviewer critique.**
 > `_reads_sensitive_path` is now also checked in `visit_Call`, so
 > `return path.read_text()` shapes no longer escape SECRET_FS_READ
@@ -161,7 +175,7 @@ by default — opt out explicitly with `--allow-shallow` / `--allow-unknown`.
 ## What's under the hood
 
 Static analysis only — no sandbox, no execution. Two analyzers feed a
-10-rule intent classifier:
+11-rule intent classifier:
 
 - **Python analyzer** (`mis/analyzers/python.py`) — AST + per-tool body
   analysis. Covers FastMCP (`@mcp.tool()`) and the official low-level SDK
@@ -230,7 +244,7 @@ The list is long and labeled. Headlines:
 - **L13 — Tool registration coverage is partial.** 20 servers (60.6% of the
   v0.1.7 scanned set) are `unknown` because their SDK pattern isn't covered.
 
-Read [LIMITATIONS.md](./LIMITATIONS.md) for L1..L24 in full.
+Read [LIMITATIONS.md](./LIMITATIONS.md) for L1..L25 in full.
 
 ## Layout
 
@@ -242,7 +256,7 @@ mis/
 │   ├── js.py           # regex fallback for TS source / parse failures
 │   ├── manifest.py     # package.json / pyproject.toml / setup.py
 │   └── types.py        # ToolProfile + BehaviorSignal enum
-├── classifier/intent.py # 10 rules → verdict + reason
+├── classifier/intent.py # 11 rules → verdict + reason
 ├── extractors/         # file:// / github: / npm: / pypi:
 ├── report/render.py    # rich-table + JSON
 ├── cli.py              # `mis` typer app
@@ -255,7 +269,7 @@ eval/
 ├── run.py              # harness
 └── results/{v0.1.3,v0.1.4,v0.1.5}/{report.md,run.json}
 
-tests/                  # 80 unit + integration tests, 22 fixtures
+tests/                  # 81 unit + integration tests, 23 fixtures
 ```
 
 ## Relationship to neighbor projects
@@ -265,7 +279,7 @@ tests/                  # 80 unit + integration tests, 22 fixtures
 | `mcp-trust` | Sigstore-style trust + runtime proxy | v0.1-alpha |
 | `arsp` | Runtime security plane: capability tokens, IFC, output sealing | research |
 | `agent-config-injection` | Workspace config-file injection scanner (`.cursorrules`, `mcp.json`) | v0.1.8 |
-| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.11 |
+| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.12 |
 
 The composition story: `agent-config-injection` scans config files in a
 workspace, `mcp-intent-sentinel` scans the server source before install,
