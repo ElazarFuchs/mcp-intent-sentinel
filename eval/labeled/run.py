@@ -75,6 +75,9 @@ def _run_one(entry: dict) -> dict:
         "confidence": entry["confidence"],
         "reviewer": entry["reviewer"],
         "date_labeled": entry["date_labeled"],
+        # v0.1.15 — `synthetic: true` marks in-house fixtures (not in-the-wild).
+        # Carried into the row so _confusion() can split recall by source.
+        "synthetic": bool(entry.get("synthetic", False)),
         "rationale_first_60": entry["rationale"][:60],
         "ok": False,
         "duration_seconds": None,
@@ -108,7 +111,16 @@ def _run_one(entry: dict) -> dict:
 
 
 def _confusion(rows: list[dict]) -> dict:
-    """Build the per-cell confusion matrix and the headline metrics."""
+    """Build the per-cell confusion matrix and the headline metrics.
+
+    v0.1.15 — recall is split into `synthetic_recall` and
+    `in_the_wild_recall`. NEVER report a single combined recall: the
+    synthetic fixtures were authored by MIS authors to test their own
+    rules, so "recall on synthetic" is rule-self-test, not coverage. The
+    eval/labeled/README.md MUST-split rule that was cultural-only pre-
+    v0.1.15 is now enforced in the data structure — there IS no `recall`
+    field, only the two split fields.
+    """
     cells: dict[tuple[str, str], int] = {}
     by_class: dict[str, int] = {
         "TP": 0, "FP": 0, "TN": 0, "FN": 0,
@@ -119,9 +131,33 @@ def _confusion(rows: list[dict]) -> dict:
         if r["verdict"] is not None:
             cells[(r["label"], r["verdict"])] = cells.get((r["label"], r["verdict"]), 0) + 1
 
-    tp = by_class["TP"]; fp = by_class["FP"]; tn = by_class["TN"]; fn = by_class["FN"]
+    tp = by_class["TP"]; fp = by_class["FP"]
     precision = tp / (tp + fp) if (tp + fp) else None
-    recall    = tp / (tp + fn) if (tp + fn) else None
+
+    # v0.1.15 — synthetic/in-the-wild recall split.
+    threat_rows = [r for r in rows if r["label"] in {"suspicious", "malicious"}]
+    syn_threat   = [r for r in threat_rows if r["synthetic"]]
+    wild_threat  = [r for r in threat_rows if not r["synthetic"]]
+
+    def _split_recall(group: list[dict]) -> tuple[float | None, int, int]:
+        """Return (recall, tp, fn). Note: rows that errored (extraction
+        failure) are NOT counted in tp or fn — recall is over actually-
+        testable rows only. errored rows are reported separately so the
+        denominator doesn't silently shrink."""
+        tp_in = sum(1 for r in group if r["classification"] == "TP")
+        fn_in = sum(1 for r in group if r["classification"] == "FN")
+        # coverage_gap on a threat label is NOT a FN — MIS admitted it
+        # couldn't analyze; reported separately.
+        if (tp_in + fn_in) == 0:
+            return None, tp_in, fn_in
+        return tp_in / (tp_in + fn_in), tp_in, fn_in
+
+    syn_recall, syn_tp, syn_fn = _split_recall(syn_threat)
+    wild_recall, wild_tp, wild_fn = _split_recall(wild_threat)
+    syn_errors  = sum(1 for r in syn_threat  if r["classification"] == "error")
+    wild_errors = sum(1 for r in wild_threat if r["classification"] == "error")
+    syn_cov  = sum(1 for r in syn_threat  if r["classification"] == "coverage_gap")
+    wild_cov = sum(1 for r in wild_threat if r["classification"] == "coverage_gap")
 
     return {
         "by_class": by_class,
@@ -131,9 +167,33 @@ def _confusion(rows: list[dict]) -> dict:
         ],
         "metrics": {
             "precision": round(precision, 3) if precision is not None else None,
-            "recall":    round(recall,    3) if recall    is not None else None,
-            "n_threat_labels": tp + fn,
-            "n_benign_labels": tn + fp,
+            "synthetic_recall": {
+                "value": round(syn_recall, 3) if syn_recall is not None else None,
+                "n_threat": len(syn_threat),
+                "tp": syn_tp,
+                "fn": syn_fn,
+                "extraction_errors": syn_errors,
+                "coverage_gaps": syn_cov,
+                "caveat": (
+                    "Synthetic recall measures MIS against fixtures authored by MIS "
+                    "authors to test their own rules. This is rule-self-test, NOT "
+                    "evidence of real-world coverage. DO NOT cite as 'MIS recall'."
+                ),
+            },
+            "in_the_wild_recall": {
+                "value": round(wild_recall, 3) if wild_recall is not None else None,
+                "n_threat": len(wild_threat),
+                "tp": wild_tp,
+                "fn": wild_fn,
+                "extraction_errors": wild_errors,
+                "coverage_gaps": wild_cov,
+                "caveat": (
+                    "In-the-wild recall is the only number that estimates real-world "
+                    "coverage. Undefined until the corpus contains testable in-the-wild "
+                    "malicious labels (postmark-mcp@1.0.16 was yanked and now errors)."
+                ),
+            },
+            "n_benign_labels": by_class["TN"] + by_class["FP"],
             "n_total":          sum(by_class.values()),
         },
     }
@@ -143,15 +203,42 @@ def _render(rows: list[dict], conf: dict, mis_v: str) -> str:
     out: list[str] = []
     out.append(f"# Labeled-corpus confusion — MIS v{mis_v}, {_now_iso()}\n")
     m = conf["metrics"]
-    out.append(f"**N**: {m['n_total']} labeled rows ({m['n_threat_labels']} threat, {m['n_benign_labels']} benign).")
+    syn = m["synthetic_recall"]
+    wild = m["in_the_wild_recall"]
+
+    out.append(f"**N**: {m['n_total']} labeled rows ({syn['n_threat'] + wild['n_threat']} threat, {m['n_benign_labels']} benign).")
     if m["precision"] is not None:
         out.append(f"**Precision** (on threat verdicts): {m['precision']}")
-    if m["recall"] is not None:
-        out.append(f"**Recall**: {m['recall']}")
+
+    # v0.1.15 — recall is split. Never one combined number at the top of the
+    # report. The synthetic fixtures were authored by MIS authors to test their
+    # own rules; lumping them with in-the-wild evidence would inflate "recall"
+    # into something that doesn't measure coverage.
     out.append("")
-    out.append("Precision/recall are defined ONLY over (TP+FP) / (TP+FN). Coverage-gap")
-    out.append("verdicts (`shallow` / `unknown`) are NOT errors — MIS admitted it couldn't analyze")
-    out.append("— and are reported separately.\n")
+    out.append("## Recall (split — see L20/L21)\n")
+
+    if syn["value"] is not None:
+        out.append(f"- **synthetic_recall: {syn['value']}**  ({syn['tp']}/{syn['tp']+syn['fn']}, "
+                   f"N={syn['n_threat']}; coverage-gaps={syn['coverage_gaps']}, errors={syn['extraction_errors']})")
+    else:
+        out.append(f"- **synthetic_recall: undefined**  (N={syn['n_threat']}, "
+                   f"no testable synthetic threat rows)")
+    out.append(f"  - {syn['caveat']}")
+
+    if wild["value"] is not None:
+        out.append(f"- **in_the_wild_recall: {wild['value']}**  ({wild['tp']}/{wild['tp']+wild['fn']}, "
+                   f"N={wild['n_threat']}; coverage-gaps={wild['coverage_gaps']}, errors={wild['extraction_errors']})")
+    else:
+        out.append(f"- **in_the_wild_recall: undefined**  (N={wild['n_threat']} labeled, "
+                   f"{wild['extraction_errors']} unfetchable, {wild['tp']+wild['fn']} actually testable)")
+    out.append(f"  - {wild['caveat']}")
+
+    out.append("")
+    out.append("Precision is computed over (TP+FP) regardless of synthetic vs in-the-wild —")
+    out.append("a false positive on a synthetic-labeled benign is the same kind of error as on")
+    out.append("an in-the-wild benign. Coverage-gap verdicts (`shallow` / `unknown`) are NOT")
+    out.append("errors — MIS admitted it couldn't analyze — and are NOT counted in recall's")
+    out.append("denominator; they're surfaced separately above.\n")
 
     out.append("## Counts by classification\n")
     out.append("| classification | count | meaning |")
@@ -170,16 +257,19 @@ def _render(rows: list[dict], conf: dict, mis_v: str) -> str:
     out.append("")
 
     out.append("## Per-row\n")
-    out.append("| name | label | verdict | classification | rule_hits | tools | confidence |")
+    out.append("| name | source | label | verdict | classification | tools | conf |")
     out.append("|---|---|---|---|---|---:|---:|")
     for r in rows:
-        hits = ", ".join(r["rule_hits"] or [])[:60]
         v = r["verdict"] or "ERROR"
         cls = r["classification"]
         cls_mark = {"TP": "TP", "FP": "**FP**", "FN": "**FN**", "TN": "TN",
                     "coverage_gap": "coverage", "error": "error"}.get(cls, cls)
+        # v0.1.15 — surface synthetic flag in the row so a reader scanning
+        # the table doesn't mistake a TP on a synthetic for a TP on an
+        # in-the-wild capture.
+        source_marker = "synthetic" if r["synthetic"] else "in-the-wild"
         out.append(
-            f"| `{r['name']}` | {r['label']} | {v} | {cls_mark} | {hits} | "
+            f"| `{r['name']}` | {source_marker} | {r['label']} | {v} | {cls_mark} | "
             f"{r['tools_detected'] if r['tools_detected'] is not None else '-'} | "
             f"{r['confidence']} |"
         )

@@ -1,4 +1,33 @@
-# LIMITATIONS — v0.1.14
+# LIMITATIONS — v0.1.15
+
+## Changes since v0.1.14
+
+v0.1.14's README declared "reports MUST split synthetic-vs-in-the-wild
+recall" but the harness `eval/labeled/run.py` didn't enforce it — it
+emitted a single combined `Recall: 1.0` line at the top of confusion.md.
+The "MUST" was cultural, not mechanical. v0.1.15 fixes this:
+
+- `_confusion()` now computes `synthetic_recall` and `in_the_wild_recall`
+  separately. The `metrics` dict has NO `recall` field — only the two
+  split fields. Anyone reading the JSON gets the split for free; anyone
+  writing slides off the JSON can't accidentally cite a combined number
+  because no combined number exists.
+- `_render()` prints the two values with their explicit caveats inline.
+  Synthetic carries: "rule-self-test, NOT evidence of real-world
+  coverage. DO NOT cite as 'MIS recall'." In-the-wild carries:
+  "undefined until corpus contains testable in-the-wild malicious labels
+  (postmark-mcp@1.0.16 yanked)."
+- Per-row table now surfaces a `source` column (`synthetic` / `in-the-wild`)
+  next to the name so a scanner of the table can't mistake a TP on a
+  synthetic for evidence about real-world coverage.
+
+v0.1.15 confusion at MIS v0.1.14 (eval/labeled/results/v0.1.15/):
+  synthetic_recall:    1.0 (10/10, N=10)
+  in_the_wild_recall:  undefined (N=1, postmark-mcp@1.0.16 unfetchable)
+  precision:           1.0 (0 FPs across all rows; 1 TN, 3 coverage-gaps)
+
+No source-code changes in `mis/` — this is a corpus-reporting change
+only. 82/82 tests still pass.
 
 ## Changes since v0.1.13
 

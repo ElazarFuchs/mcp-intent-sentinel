@@ -1,5 +1,15 @@
 # MCP Intent Sentinel
 
+> **v0.1.15 — enforce the synthetic / in-the-wild recall split in the
+> harness, not just the README.** v0.1.14 wrote "reports MUST split
+> synthetic-vs-in-the-wild recall" as a cultural rule but emitted a
+> single `Recall: 1.0` at the top of confusion.md anyway — the kind of
+> number that screenshots into a presentation as "MIS has 100% recall."
+> v0.1.15: `_confusion()` has NO `recall` field, only `synthetic_recall`
+> and `in_the_wild_recall` separately, each with its own caveat printed
+> inline. Per-row table surfaces a `source` column. The MUST is now
+> mechanical, not cultural. No `mis/` changes.
+
 > **v0.1.14 — corpus side of the v0.1.13 critique (L20 / L21 partial
 > closure).** No `mis/` changes — labels.json grew from 5 to 15 entries:
 > 10 in-house `tests/corpus/malicious/*` fixtures added as `file://`
@@ -306,7 +316,7 @@ tests/                  # 82 unit + integration tests, 24 fixtures
 | `mcp-trust` | Sigstore-style trust + runtime proxy | v0.1-alpha |
 | `arsp` | Runtime security plane: capability tokens, IFC, output sealing | research |
 | `agent-config-injection` | Workspace config-file injection scanner (`.cursorrules`, `mcp.json`) | v0.1.8 |
-| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.14 |
+| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.15 |
 
 The composition story: `agent-config-injection` scans config files in a
 workspace, `mcp-intent-sentinel` scans the server source before install,
