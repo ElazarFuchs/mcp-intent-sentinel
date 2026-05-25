@@ -1,5 +1,17 @@
 # MCP Intent Sentinel
 
+> **v0.1.9 — LLM fallback pilot (L13).** Sends `unknown`-verdicted source
+> to a frontier LLM with a hardened extraction-only prompt; the LLM returns
+> tool registrations + behavior signals in a closed-enum JSON schema; the
+> existing deterministic classifier consumes those features as if they came
+> from an AST analyzer. First sweep on the 20 v0.1.7 unknowns: **18 / 20
+> (90%) moved out of `unknown`** for $0.95 in OpenRouter spend. Pilot lives
+> in [eval/llm_fallback/](eval/llm_fallback/) and is NOT in the production
+> scan path; the 3 `malicious` verdicts the pilot produced are existing-
+> rule FPs (r4 mismatching on filesystem-server / google-maps / figma),
+> tracked as [L23](LIMITATIONS.md). Trust-boundary risks are tracked as
+> [L22](LIMITATIONS.md).
+
 > **v0.1.8 — labeled corpus (L11) framework lands.** `eval/labeled/` is the
 > ground-truth half of the eval suite: a versioned `labels.json` of
 > human-vetted package classifications and a harness that compares MIS's
@@ -197,7 +209,7 @@ The list is long and labeled. Headlines:
 - **L13 — Tool registration coverage is partial.** 20 servers (60.6% of the
   v0.1.7 scanned set) are `unknown` because their SDK pattern isn't covered.
 
-Read [LIMITATIONS.md](./LIMITATIONS.md) for L1..L21 in full.
+Read [LIMITATIONS.md](./LIMITATIONS.md) for L1..L23 in full.
 
 ## Layout
 
@@ -232,7 +244,7 @@ tests/                  # 79 unit + integration tests, 21 fixtures
 | `mcp-trust` | Sigstore-style trust + runtime proxy | v0.1-alpha |
 | `arsp` | Runtime security plane: capability tokens, IFC, output sealing | research |
 | `agent-config-injection` | Workspace config-file injection scanner (`.cursorrules`, `mcp.json`) | v0.1.8 |
-| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.8 |
+| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.9 |
 
 The composition story: `agent-config-injection` scans config files in a
 workspace, `mcp-intent-sentinel` scans the server source before install,
