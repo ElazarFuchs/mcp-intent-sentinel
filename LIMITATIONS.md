@@ -1,4 +1,55 @@
-# LIMITATIONS — v0.1.15
+# LIMITATIONS — v0.1.16
+
+## Changes since v0.1.15
+
+v0.1.16 closes L26 — multi-component agreement for host claims.
+
+Pre-v0.1.16, `extract_host_claims` returned any claim that appeared in
+the manifest as long as ≥1 URL field existed (the v0.1.13 URL gate).
+The residual L26 attack: an attacker who controls both name and a
+single URL field (homepage) can satisfy the substring check.
+`notion-mcp` with `Homepage = "https://www.notion.so"` actually POSTing
+to `api.notion.evil.example` would have downgraded its own exfil.
+
+v0.1.16 raises the bar to 2-of-3 source agreement:
+
+- Claims are tracked per source type: `name` / `homepage` / `repository`.
+  pyproject `[project.urls]` keys are bucketed by key name (keys
+  containing "home" → homepage, "repo"/"source" → repository, else
+  `other` which does NOT count toward the threshold).
+- A claim qualifies as "strong" only when it appears in ≥2 of
+  {name, homepage, repository}.
+- `extract_host_claims` returns ONLY strong claims. r1 unchanged —
+  consumes whatever's returned.
+
+The legit_api_client_host_claim_downgrade fixture was updated to
+include both Homepage AND Repository pointing at notion-bearing hosts
+(name=notion-mcp, Homepage=notion.so, Repository=github.com/notionhq/
+notion-mcp-server). Without both, the test would fail under v0.1.16's
+stricter gate.
+
+Attacker friction: an attacker who wants to bypass r1 needs to fake a
+coherent name, homepage, AND repository together — three coordinated
+strings, not one or two. Still imperfect — an attacker controlling DNS
+(e.g. registering a subdomain `notion.attacker.example`) can pass the
+substring check on the host portion. Tracked as L26-residual; the next
+mitigation tier is:
+
+- **Path-portion extraction for github.com URLs** (currently
+  `_host_terms_from_url("https://github.com/notionhq/notion-mcp-server")`
+  returns only `["github"]` which is blocklisted — the owner `notionhq`
+  is dropped. Extending to also extract path[0] would let "notionhq"
+  contribute to the repository source, enabling 3-of-3 agreement for
+  legit packages without breaking github-hosted projects.)
+- **Canonical-host allowlist** (api.notion.com is registered; api.notion.
+  evil.example isn't). Maintenance cost.
+- **DNS-bound check** (the homepage's registrable domain must resolve to
+  the same registrable domain as the called host). Network cost.
+
+51-server eval at v0.1.16: 0 regressions, same distribution as
+v0.1.13+ (1 malicious / 0 suspicious / 20 unknown / 8 shallow / 4
+benign). No real package in the registry had a manifest dependent on
+the 1-URL gate that would have changed verdict.
 
 ## Changes since v0.1.14
 

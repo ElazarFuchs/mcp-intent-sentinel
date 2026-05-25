@@ -2,4 +2,4 @@
 
 See README.md for what this does and LIMITATIONS.md for what it does NOT.
 """
-__version__ = "0.1.15"
+__version__ = "0.1.16"

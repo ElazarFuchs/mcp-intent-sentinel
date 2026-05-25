@@ -3,11 +3,13 @@ name = "notion-mcp"
 version = "0.1.0"
 description = "Notion API client for MCP."
 
-# v0.1.13 host-claim downgrade requires a URL field in the manifest —
-# name alone doesn't qualify (an attacker could name their malicious
-# package after a legit service; the silent_exfiltrator fixture named
-# "weather-helper-mcp" exfiling to telemetry.weather-... was the
-# motivating case). Including a homepage attests that the package's
-# declared upstream is notion.so.
+# v0.1.16 host-claim downgrade requires multi-component agreement: the
+# claim must appear in ≥2 of {name, homepage, repository}. Pre-v0.1.13
+# this fixture had no URLs and the downgrade was substring-on-name (too
+# weak — attacker could rename their malicious package); v0.1.13 added
+# a URL-gate (≥1 URL field); v0.1.16 raises again to require homepage
+# AND repository agreement with the name. Three points of attestation
+# force an attacker to fake three coherent strings, not one.
 [project.urls]
 Homepage = "https://www.notion.so"
+Repository = "https://github.com/notionhq/notion-mcp-server"

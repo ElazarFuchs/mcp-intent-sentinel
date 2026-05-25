@@ -85,27 +85,51 @@ _HOST_CLAIM_BLOCKLIST = {
 
 
 def extract_host_claims(root: Path) -> list[str]:
-    """Return host-claim substrings derived from package.json + pyproject.toml.
+    """Return STRONG host-claim substrings derived from manifest metadata.
 
-    A "claim" is a substring (lowercased, len >= 4, not blocklisted) that
-    the package self-declares as a host it talks to. Sources:
-      package.json:   name (after stripping @scope/), homepage, repository.url
-      pyproject.toml: name, [project.urls] Homepage / homepage / Repository
+    v0.1.16 — multi-component agreement. A claim is "strong" only when it
+    appears in at least 2 of 3 distinct source types: `name`, `homepage`,
+    `repository`. The v0.1.13 URL-gate ("≥1 URL field") raised the
+    attacker friction from "one string to fake" to "two strings to fake";
+    v0.1.16 raises it again to "two URL-bearing strings to fake AND make
+    them agree with the name." The motivating L26 attack — `notion-mcp`
+    with homepage=notion.so but actually POSTing to api.notion.evil.example
+    — was satisfiable under v0.1.13 (one URL field is enough). v0.1.16
+    breaks it: the homepage alone agrees with the name, but the attacker
+    would also need a repository URL pointing at a notion-bearing host.
+    Three points of agreement reduce the attacker's free-naming surface.
 
-    v0.1.13 gate: claims are returned ONLY if the manifest also declares at
-    least one URL field (homepage / repository.url / [project.urls].*).
-    Name-only manifests return [] — without a URL attestation we don't
-    trust the name alone to host-claim-downgrade. This blocks the obvious
-    exploit where an attacker names their malicious package "weather-helper-mcp"
-    and POSTs to `telemetry.weather-cdn.example` — name match alone would have
-    downgraded an actual exfil (silent_exfiltrator fixture in the v0.1.13
-    test suite). Requiring URL field forces a second signal.
+    Source types and how they're extracted:
+      package.json:
+        `name`         (split on -_./@ , drop generic suffixes)  -> source=name
+        `homepage`                                                 -> source=homepage
+        `repository.url` or `repository` (string)                  -> source=repository
+      pyproject.toml:
+        `[project] name`                                           -> source=name
+        `[project.urls]` items, typed by KEY name:
+            key contains "home"            -> source=homepage
+            key contains "repo" / "source" -> source=repository
+            else                            -> source=other (does NOT count for the
+                                              ≥2 rule — a pyproject "Documentation"
+                                              URL shouldn't substitute for a
+                                              missing repository)
 
-    Output is sorted for deterministic tests.
+    A claim qualifies as strong (returned) only if it appears in ≥2 of
+    {name, homepage, repository} source types. Claims appearing only in
+    `other` URL fields do NOT contribute to the threshold; they're noise
+    for this purpose.
+
+    Output is sorted for deterministic tests. Blocklist + min-length 4
+    filter still apply.
     """
-    name_claims: set[str] = set()
-    url_claims: set[str] = set()
-    saw_url_field = False
+    # claim -> set of source types it appears in.
+    sources: dict[str, set[str]] = {}
+
+    def _add(s: str, source_type: str) -> None:
+        for part in (s if isinstance(s, list) else [s]):
+            if not isinstance(part, str):
+                continue
+            sources.setdefault(part, set()).add(source_type)
 
     for pkg_path in root.rglob("package.json"):
         if any(part == "node_modules" for part in pkg_path.parts):
@@ -117,20 +141,22 @@ def extract_host_claims(root: Path) -> list[str]:
         name = data.get("name") or ""
         if isinstance(name, str):
             for part in _split_pkg_name(name):
-                name_claims.add(part)
+                _add(part, "name")
         homepage = data.get("homepage")
         if isinstance(homepage, str) and homepage.strip():
-            saw_url_field = True
-            url_claims.update(_host_terms_from_url(homepage))
+            for term in _host_terms_from_url(homepage):
+                _add(term, "homepage")
         repo = data.get("repository")
+        repo_url: str | None = None
         if isinstance(repo, dict):
             url = repo.get("url")
             if isinstance(url, str) and url.strip():
-                saw_url_field = True
-                url_claims.update(_host_terms_from_url(url))
+                repo_url = url
         elif isinstance(repo, str) and repo.strip():
-            saw_url_field = True
-            url_claims.update(_host_terms_from_url(repo))
+            repo_url = repo
+        if repo_url:
+            for term in _host_terms_from_url(repo_url):
+                _add(term, "repository")
 
     for path in root.rglob("pyproject.toml"):
         try:
@@ -141,20 +167,33 @@ def extract_host_claims(root: Path) -> list[str]:
         name = proj.get("name") or ""
         if isinstance(name, str):
             for part in _split_pkg_name(name):
-                name_claims.add(part)
+                _add(part, "name")
         urls = proj.get("urls") or {}
         if isinstance(urls, dict):
-            for v in urls.values():
-                if isinstance(v, str) and v.strip():
-                    saw_url_field = True
-                    url_claims.update(_host_terms_from_url(v))
+            for k, v in urls.items():
+                if not (isinstance(v, str) and v.strip()):
+                    continue
+                k_low = k.lower() if isinstance(k, str) else ""
+                if "home" in k_low:
+                    bucket = "homepage"
+                elif "repo" in k_low or "source" in k_low:
+                    bucket = "repository"
+                else:
+                    bucket = "other"
+                for term in _host_terms_from_url(v):
+                    _add(term, bucket)
 
-    if not saw_url_field:
-        # Name-only manifest — refuse to host-claim-downgrade on name alone.
-        return []
-
-    combined = name_claims | url_claims
-    return sorted(c for c in combined if len(c) >= 4 and c not in _HOST_CLAIM_BLOCKLIST)
+    # v0.1.16: multi-component gate. A claim is strong only when it
+    # appears in ≥2 of {name, homepage, repository}. `other`-only claims
+    # are dropped from the threshold count.
+    strong: list[str] = []
+    qualifying_sources = {"name", "homepage", "repository"}
+    for claim, src_set in sources.items():
+        if len(claim) < 4 or claim in _HOST_CLAIM_BLOCKLIST:
+            continue
+        if len(src_set & qualifying_sources) >= 2:
+            strong.append(claim)
+    return sorted(strong)
 
 
 def _split_pkg_name(name: str) -> list[str]:

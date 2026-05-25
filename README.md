@@ -1,5 +1,18 @@
 # MCP Intent Sentinel
 
+> **v0.1.16 — multi-component agreement for host claims (L26 closure).**
+> Pre-v0.1.16 the host-claim downgrade required ≥1 URL field in the
+> manifest (the v0.1.13 gate). The residual attack: an attacker who
+> controls name + a single homepage can satisfy substring matching and
+> downgrade their own exfil. v0.1.16 raises the bar — a claim qualifies
+> only when it appears in ≥2 of {name, homepage, repository} source
+> types. `[project.urls]` keys are bucketed by key name (home → homepage,
+> repo/source → repository, else `other` which doesn't count). The legit
+> `legit_api_client_host_claim_downgrade` fixture was updated to declare
+> both Homepage AND Repository; without both it would no longer qualify
+> for downgrade. Attacker friction: three coordinated strings to fake,
+> not one. 82/82 tests pass, 51-server eval has 0 regressions.
+
 > **v0.1.15 — enforce the synthetic / in-the-wild recall split in the
 > harness, not just the README.** v0.1.14 wrote "reports MUST split
 > synthetic-vs-in-the-wild recall" as a cultural rule but emitted a
@@ -316,7 +329,7 @@ tests/                  # 82 unit + integration tests, 24 fixtures
 | `mcp-trust` | Sigstore-style trust + runtime proxy | v0.1-alpha |
 | `arsp` | Runtime security plane: capability tokens, IFC, output sealing | research |
 | `agent-config-injection` | Workspace config-file injection scanner (`.cursorrules`, `mcp.json`) | v0.1.8 |
-| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.15 |
+| **`mcp-intent-sentinel`** (this) | Pre-install intent classification of MCP server source | v0.1.16 |
 
 The composition story: `agent-config-injection` scans config files in a
 workspace, `mcp-intent-sentinel` scans the server source before install,
